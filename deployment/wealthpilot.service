@@ -1,0 +1,26 @@
+[Unit]
+Description=WealthPilot FastAPI Backend
+Documentation=https://github.com/arnau/wealth-pilot
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=exec
+User=wealthpilot
+Group=wealthpilot
+WorkingDirectory=/opt/wealthpilot/app/backend
+EnvironmentFile=/opt/wealthpilot/.env.prod
+ExecStart=/opt/wealthpilot/venv/bin/gunicorn main:app \
+    --workers 2 \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --bind 127.0.0.1:8000 \
+    --access-logfile - \
+    --error-logfile -
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=wealthpilot
+
+[Install]
+WantedBy=multi-user.target
