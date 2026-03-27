@@ -3,6 +3,8 @@ Tests de dades inicials (seed).
 Comproven que el seed s'ha executat correctament i les dades clau existeixin.
 """
 
+from core.constants import IndexTicker, ObjectiveKey, ParameterCategory, ParameterKey, ScenarioType
+
 
 def test_assets_count(db_conn):
     """Han d'existir exactament 8 assets actius sembrats."""
@@ -46,7 +48,8 @@ def test_scenarios_types(db_conn):
     """Els tres tipus d'escenari han d'existir."""
     rows = db_conn.fetch("SELECT DISTINCT scenario_type FROM scenarios ORDER BY scenario_type")
     types = [r["scenario_type"] for r in rows]
-    assert types == ["adverse", "base", "optimistic"], f"Tipus d'escenari incorrectes: {types}"
+    expected_types = sorted([ScenarioType.ADVERSE, ScenarioType.BASE, ScenarioType.OPTIMISTIC])
+    assert types == expected_types, f"Tipus d'escenari incorrectes: {types}"
 
 
 def test_scenarios_annual_return_range(db_conn):
@@ -72,8 +75,12 @@ def test_contributions_amounts_positive(db_conn):
 def test_parameters_exist(db_conn):
     """Els paràmetres globals crítics han d'existir."""
     critical_params = [
-        "cash_balance_eur", "rebalance_threshold_pct", "default_horizon_months",
-        "inflation_rate_pct", "irpf_bracket_1_rate", "irpf_bracket_2_rate",
+        ParameterKey.CASH_BALANCE_EUR,
+        ParameterKey.REBALANCE_THRESHOLD_PCT,
+        ParameterKey.DEFAULT_HORIZON_MONTHS,
+        ParameterKey.INFLATION_RATE_PCT,
+        ParameterKey.IRPF_BRACKET_1_RATE,
+        ParameterKey.IRPF_BRACKET_2_RATE,
     ]
     rows = db_conn.fetch("SELECT key FROM parameters")
     existing = {r["key"] for r in rows}
@@ -83,7 +90,7 @@ def test_parameters_exist(db_conn):
 
 def test_parameters_have_valid_categories(db_conn):
     """Tots els paràmetres han d'estar en una categoria vàlida."""
-    valid = {"portfolio", "simulation", "tax", "personal", "ui"}
+    valid = {str(c) for c in ParameterCategory}
     rows = db_conn.fetch("SELECT DISTINCT category FROM parameters WHERE category IS NOT NULL")
     db_cats = {r["category"] for r in rows}
     invalid = db_cats - valid
@@ -94,8 +101,8 @@ def test_objectives_exist(db_conn):
     """Han d'existir almenys els 2 objectius sembrats."""
     rows = db_conn.fetch("SELECT key FROM objectives")
     keys = {r["key"] for r in rows}
-    assert "emergency_fund" in keys, "Objectiu 'emergency_fund' no trobat"
-    assert "home_purchase" in keys, "Objectiu 'home_purchase' no trobat"
+    assert ObjectiveKey.EMERGENCY_FUND in keys, f"Objectiu '{ObjectiveKey.EMERGENCY_FUND}' no trobat"
+    assert ObjectiveKey.HOME_PURCHASE in keys, f"Objectiu '{ObjectiveKey.HOME_PURCHASE}' no trobat"
 
 
 def test_objectives_target_amounts_positive(db_conn):
@@ -108,8 +115,8 @@ def test_market_indices_exist(db_conn):
     """Han d'existir els índexs de mercat sembrats."""
     rows = db_conn.fetch("SELECT ticker_yf FROM market_indices")
     tickers = {r["ticker_yf"] for r in rows}
-    assert "^GSPC" in tickers, "S&P 500 no trobat"
-    assert "URTH" in tickers, "MSCI World ETF no trobat"
+    assert IndexTicker.SP500 in tickers, "S&P 500 no trobat"
+    assert IndexTicker.MSCI_WORLD_ETF in tickers, "MSCI World ETF no trobat"
 
 
 def test_dashboard_widgets_exist(db_conn):
@@ -123,7 +130,7 @@ def test_bitcoin_scenario_has_high_volatility(db_conn):
     row = db_conn.fetchrow(
         "SELECT s.volatility FROM scenarios s "
         "JOIN assets a ON a.id = s.asset_id "
-        "WHERE a.display_name = 'Bitcoin' AND s.scenario_type = 'base'"
+        f"WHERE a.display_name = 'Bitcoin' AND s.scenario_type = '{ScenarioType.BASE}'"
     )
     assert row is not None, "No s'ha trobat l'escenari base de Bitcoin"
     assert float(row["volatility"]) > 40, f"Volatilitat de Bitcoin massa baixa: {row['volatility']}"

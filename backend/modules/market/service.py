@@ -27,6 +27,7 @@ import yfinance as yf
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.constants import AssetType, FetchStatus, ParameterKey
 from modules.market.schemas import (
     AssetPriceHistoryResponse,
     AssetPriceOut,
@@ -271,9 +272,10 @@ async def fill_all_gaps(db: AsyncSession) -> GapFillResponse:
     last_dates: dict[int, date] = {r.asset_id: r.last_date for r in last_dates_result}
 
     # ── 3. Portfolio inception date from parameters ───────────────────────────
-    inception_row = await db.execute(text("""
-        SELECT value FROM parameters WHERE key = 'portfolio_inception_date' LIMIT 1
-    """))
+    inception_row = await db.execute(
+        text("SELECT value FROM parameters WHERE key = :key LIMIT 1"),
+        {"key": ParameterKey.PORTFOLIO_INCEPTION_DATE},
+    )
     inception_param = inception_row.scalar()
     try:
         inception_date = date.fromisoformat(inception_param) if inception_param else _DEFAULT_INCEPTION
@@ -351,7 +353,7 @@ async def fill_all_gaps(db: AsyncSession) -> GapFillResponse:
                     info = asset_by_ticker[ticker]
                     assets_failed.append(info["display_name"])
                     logger.warning(err)
-                    await _log_fetch(db, info["id"], ticker, "failed", error=err)
+                    await _log_fetch(db, info["id"], ticker, FetchStatus.FAILED, error=err)
                     await db.commit()
             except Exception as exc:
                 err = f"{ticker}: download failed — {exc}"
@@ -359,7 +361,7 @@ async def fill_all_gaps(db: AsyncSession) -> GapFillResponse:
                 info = asset_by_ticker[ticker]
                 assets_failed.append(info["display_name"])
                 logger.error(err)
-                await _log_fetch(db, info["id"], ticker, "failed", error=err)
+                await _log_fetch(db, info["id"], ticker, FetchStatus.FAILED, error=err)
                 await db.commit()
 
         # ── 6. Insert into price_history, one ticker at a time ────────────────
@@ -386,7 +388,7 @@ async def fill_all_gaps(db: AsyncSession) -> GapFillResponse:
                 logger.info("%s (%s): inserted %d rows", display_name, ticker, inserted_count)
 
                 last_price = float(df["Close"].iloc[-1]) if not df.empty else None
-                await _log_fetch(db, asset_id, ticker, "success", price=last_price)
+                await _log_fetch(db, asset_id, ticker, FetchStatus.SUCCESS, price=last_price)
                 await db.commit()
 
             except Exception as exc:
@@ -584,7 +586,7 @@ async def _query_current_prices(db: AsyncSession) -> list[AssetPriceOut]:
 
     for row in db_rows:
         stale_days = (today - row.price_date).days if row.price_date else 9999
-        stale_threshold = _STALE_DAYS_CRYPTO if row.asset_type == "crypto" else _STALE_DAYS_EQUITY
+        stale_threshold = _STALE_DAYS_CRYPTO if row.asset_type == AssetType.CRYPTO else _STALE_DAYS_EQUITY
         is_stale = stale_days > stale_threshold
 
         change_pct_1d: Optional[Decimal] = None

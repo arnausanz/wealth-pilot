@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.db import Base
+from core.constants import ScenarioType
 
 
 class Simulation(Base):
@@ -25,7 +26,7 @@ class Simulation(Base):
     # projection, what_if, comparison, monte_carlo
     simulation_type: Mapped[str] = mapped_column(String(30), default="projection", nullable=False)
     # base scenario used: adverse, base, optimistic (from scenarios table)
-    base_scenario_type: Mapped[str] = mapped_column(String(20), default="base", nullable=False)
+    base_scenario_type: Mapped[str] = mapped_column(String(20), default=ScenarioType.BASE, nullable=False)
     horizon_months: Mapped[int] = mapped_column(Integer, nullable=False)
     # initial portfolio value override (null = use current real value)
     initial_value_override: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2), nullable=True)

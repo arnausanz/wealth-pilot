@@ -13,6 +13,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from sqlalchemy import select, text  # noqa: E402
 from core.db import AsyncSessionLocal  # noqa: E402
+from core.constants import (  # noqa: E402
+    AssetClass, AssetType,
+    FetchStatus, IndexTicker,
+    ObjectiveKey,
+    ParameterCategory, ParameterKey,
+    ScenarioType, Ticker,
+)
 from modules.portfolio.models import Asset, Contribution  # noqa: E402
 from modules.config.models import Scenario, Parameter, Objective  # noqa: E402
 from modules.market.models import MarketIndex  # noqa: E402
@@ -25,10 +32,10 @@ ASSETS = [
         "name": "iShares Core MSCI World UCITS ETF",
         "display_name": "MSCI World",
         "ticker_mw": "EUNL",
-        "ticker_yf": "IWDA.AS",
+        "ticker_yf": Ticker.MSCI_WORLD,
         "isin": "IE00B4L5Y983",
-        "asset_type": "etf",
-        "asset_class": "equity",
+        "asset_type": AssetType.ETF,
+        "asset_class": AssetClass.EQUITY,
         "currency": "USD",
         "currency_exposure": "USD",
         "exchange": "AMS",
@@ -42,10 +49,10 @@ ASSETS = [
         "name": "Invesco Physical Gold ETC",
         "display_name": "Physical Gold",
         "ticker_mw": "PPFB",
-        "ticker_yf": "PHAU.L",
+        "ticker_yf": Ticker.PHYSICAL_GOLD,
         "isin": "IE00B579F325",
-        "asset_type": "etf",
-        "asset_class": "alternative",
+        "asset_type": AssetType.ETF,
+        "asset_class": AssetClass.ALTERNATIVE,
         "currency": "USD",
         "currency_exposure": "USD",
         "exchange": "LSE",
@@ -59,10 +66,10 @@ ASSETS = [
         "name": "iShares Core MSCI Europe UCITS ETF",
         "display_name": "MSCI Europe",
         "ticker_mw": "EUNK",
-        "ticker_yf": "IMAE.AS",
+        "ticker_yf": Ticker.MSCI_EUROPE,
         "isin": "IE00B4K48X80",
-        "asset_type": "etf",
-        "asset_class": "equity",
+        "asset_type": AssetType.ETF,
+        "asset_class": AssetClass.EQUITY,
         "currency": "EUR",
         "currency_exposure": "EUR",
         "exchange": "MIL",
@@ -76,10 +83,10 @@ ASSETS = [
         "name": "iShares MSCI EM IMI UCITS ETF",
         "display_name": "MSCI EM IMI",
         "ticker_mw": "IS3N",
-        "ticker_yf": "EMIM.AS",
+        "ticker_yf": Ticker.MSCI_EM_IMI,
         "isin": "IE00BKM4GZ66",
-        "asset_type": "etf",
-        "asset_class": "equity",
+        "asset_type": AssetType.ETF,
+        "asset_class": AssetClass.EQUITY,
         "currency": "USD",
         "currency_exposure": "USD",
         "exchange": "AMS",
@@ -93,10 +100,10 @@ ASSETS = [
         "name": "iShares Core MSCI Japan IMI UCITS ETF",
         "display_name": "Japan",
         "ticker_mw": "CSJP",
-        "ticker_yf": "CSJP.AS",
+        "ticker_yf": Ticker.JAPAN,
         "isin": "IE00B4L5YX21",
-        "asset_type": "etf",
-        "asset_class": "equity",
+        "asset_type": AssetType.ETF,
+        "asset_class": AssetClass.EQUITY,
         "currency": "JPY",
         "currency_exposure": "JPY",
         "exchange": "AMS",
@@ -110,10 +117,10 @@ ASSETS = [
         "name": "VanEck Defense UCITS ETF",
         "display_name": "Europe Defence",
         "ticker_mw": "WDEF",
-        "ticker_yf": "WDEF.MI",
+        "ticker_yf": Ticker.EUROPE_DEFENCE,
         "isin": "IE000YYE6WK9",
-        "asset_type": "etf",
-        "asset_class": "equity",
+        "asset_type": AssetType.ETF,
+        "asset_class": AssetClass.EQUITY,
         "currency": "EUR",
         "currency_exposure": "EUR",
         "exchange": "MIL",
@@ -127,10 +134,10 @@ ASSETS = [
         "name": "Bitcoin",
         "display_name": "Bitcoin",
         "ticker_mw": "BTC",
-        "ticker_yf": "BTC-EUR",
+        "ticker_yf": Ticker.BITCOIN,
         "isin": None,
-        "asset_type": "crypto",
-        "asset_class": "alternative",
+        "asset_type": AssetType.CRYPTO,
+        "asset_class": AssetClass.ALTERNATIVE,
         "currency": "EUR",
         "currency_exposure": "USD",
         "exchange": None,
@@ -146,8 +153,8 @@ ASSETS = [
         "ticker_mw": None,
         "ticker_yf": None,
         "isin": None,
-        "asset_type": "cash",
-        "asset_class": "cash",
+        "asset_type": AssetType.CASH,
+        "asset_class": AssetClass.CASH,
         "currency": "EUR",
         "currency_exposure": "EUR",
         "exchange": None,
@@ -162,37 +169,37 @@ ASSETS = [
 # ── Scenarios: (asset_name, scenario_type, annual_return, volatility) ────────
 SCENARIO_RETURNS = [
     # MSCI World
-    ("MSCI World",     "adverse",    Decimal("4.0"),  Decimal("15.0")),
-    ("MSCI World",     "base",       Decimal("7.0"),  Decimal("14.0")),
-    ("MSCI World",     "optimistic", Decimal("10.0"), Decimal("13.0")),
+    ("MSCI World",     ScenarioType.ADVERSE,    Decimal("4.0"),   Decimal("15.0")),
+    ("MSCI World",     ScenarioType.BASE,        Decimal("7.0"),   Decimal("14.0")),
+    ("MSCI World",     ScenarioType.OPTIMISTIC,  Decimal("10.0"),  Decimal("13.0")),
     # Physical Gold
-    ("Physical Gold",  "adverse",    Decimal("1.0"),  Decimal("12.0")),
-    ("Physical Gold",  "base",       Decimal("4.0"),  Decimal("11.0")),
-    ("Physical Gold",  "optimistic", Decimal("7.0"),  Decimal("10.0")),
+    ("Physical Gold",  ScenarioType.ADVERSE,     Decimal("1.0"),   Decimal("12.0")),
+    ("Physical Gold",  ScenarioType.BASE,         Decimal("4.0"),   Decimal("11.0")),
+    ("Physical Gold",  ScenarioType.OPTIMISTIC,   Decimal("7.0"),   Decimal("10.0")),
     # MSCI Europe
-    ("MSCI Europe",    "adverse",    Decimal("3.0"),  Decimal("14.0")),
-    ("MSCI Europe",    "base",       Decimal("6.0"),  Decimal("13.0")),
-    ("MSCI Europe",    "optimistic", Decimal("9.0"),  Decimal("12.0")),
+    ("MSCI Europe",    ScenarioType.ADVERSE,      Decimal("3.0"),   Decimal("14.0")),
+    ("MSCI Europe",    ScenarioType.BASE,          Decimal("6.0"),   Decimal("13.0")),
+    ("MSCI Europe",    ScenarioType.OPTIMISTIC,    Decimal("9.0"),   Decimal("12.0")),
     # MSCI EM IMI
-    ("MSCI EM IMI",    "adverse",    Decimal("2.0"),  Decimal("20.0")),
-    ("MSCI EM IMI",    "base",       Decimal("7.0"),  Decimal("18.0")),
-    ("MSCI EM IMI",    "optimistic", Decimal("12.0"), Decimal("16.0")),
+    ("MSCI EM IMI",    ScenarioType.ADVERSE,       Decimal("2.0"),   Decimal("20.0")),
+    ("MSCI EM IMI",    ScenarioType.BASE,           Decimal("7.0"),   Decimal("18.0")),
+    ("MSCI EM IMI",    ScenarioType.OPTIMISTIC,     Decimal("12.0"),  Decimal("16.0")),
     # Japan
-    ("Japan",          "adverse",    Decimal("2.0"),  Decimal("15.0")),
-    ("Japan",          "base",       Decimal("5.0"),  Decimal("14.0")),
-    ("Japan",          "optimistic", Decimal("8.0"),  Decimal("13.0")),
+    ("Japan",          ScenarioType.ADVERSE,        Decimal("2.0"),   Decimal("15.0")),
+    ("Japan",          ScenarioType.BASE,            Decimal("5.0"),   Decimal("14.0")),
+    ("Japan",          ScenarioType.OPTIMISTIC,      Decimal("8.0"),   Decimal("13.0")),
     # Europe Defence
-    ("Europe Defence", "adverse",    Decimal("3.0"),  Decimal("16.0")),
-    ("Europe Defence", "base",       Decimal("8.0"),  Decimal("15.0")),
-    ("Europe Defence", "optimistic", Decimal("13.0"), Decimal("14.0")),
+    ("Europe Defence", ScenarioType.ADVERSE,         Decimal("3.0"),   Decimal("16.0")),
+    ("Europe Defence", ScenarioType.BASE,             Decimal("8.0"),   Decimal("15.0")),
+    ("Europe Defence", ScenarioType.OPTIMISTIC,       Decimal("13.0"),  Decimal("14.0")),
     # Bitcoin
-    ("Bitcoin",        "adverse",    Decimal("-10.0"), Decimal("60.0")),
-    ("Bitcoin",        "base",       Decimal("15.0"),  Decimal("50.0")),
-    ("Bitcoin",        "optimistic", Decimal("40.0"),  Decimal("45.0")),
+    ("Bitcoin",        ScenarioType.ADVERSE,          Decimal("-10.0"), Decimal("60.0")),
+    ("Bitcoin",        ScenarioType.BASE,              Decimal("15.0"),  Decimal("50.0")),
+    ("Bitcoin",        ScenarioType.OPTIMISTIC,        Decimal("40.0"),  Decimal("45.0")),
     # Cash
-    ("Cash",           "adverse",    Decimal("2.0"),  Decimal("0.5")),
-    ("Cash",           "base",       Decimal("3.0"),  Decimal("0.3")),
-    ("Cash",           "optimistic", Decimal("4.0"),  Decimal("0.2")),
+    ("Cash",           ScenarioType.ADVERSE,           Decimal("2.0"),   Decimal("0.5")),
+    ("Cash",           ScenarioType.BASE,               Decimal("3.0"),   Decimal("0.3")),
+    ("Cash",           ScenarioType.OPTIMISTIC,         Decimal("4.0"),   Decimal("0.2")),
 ]
 
 # ── Contributions: (asset_name, amount, day_of_month) ───────────────────────
@@ -206,38 +213,38 @@ CONTRIBUTIONS = [
     ("Bitcoin",        Decimal("25.00"),  2),
 ]
 
-# ── Global parameters ────────────────────────────────────────────────────────
+# ── Global parameters: (key, value, value_type, category, description) ───────
 PARAMETERS = [
     # portfolio
-    ("cash_balance_eur",          "0",    "decimal", "portfolio", "Balanç de caixa actual (actualitzat manualment o via sync)"),
-    ("rebalance_threshold_pct",   "5",    "decimal", "portfolio", "Desviació màxima del target weight abans de rebalancejar (%)"),
-    ("portfolio_inception_date",  "2022-01-01", "date", "portfolio", "Data d'inici del portfolio"),
+    (ParameterKey.CASH_BALANCE_EUR,         "0",           "decimal", ParameterCategory.PORTFOLIO,  "Balanç de caixa actual (actualitzat manualment o via sync)"),
+    (ParameterKey.REBALANCE_THRESHOLD_PCT,  "5",           "decimal", ParameterCategory.PORTFOLIO,  "Desviació màxima del target weight abans de rebalancejar (%)"),
+    (ParameterKey.PORTFOLIO_INCEPTION_DATE, "2022-01-01",  "date",    ParameterCategory.PORTFOLIO,  "Data d'inici del portfolio"),
     # simulation
-    ("default_horizon_months",    "36",   "integer", "simulation", "Horitzó de simulació per defecte (mesos)"),
-    ("inflation_rate_pct",        "2.5",  "decimal", "simulation", "Taxa d'inflació anual estimada (%)"),
-    ("default_scenario_type",     "base", "string",  "simulation", "Escenari per defecte (adverse/base/optimistic)"),
+    (ParameterKey.DEFAULT_HORIZON_MONTHS,   "36",          "integer", ParameterCategory.SIMULATION, "Horitzó de simulació per defecte (mesos)"),
+    (ParameterKey.INFLATION_RATE_PCT,       "2.5",         "decimal", ParameterCategory.SIMULATION, "Taxa d'inflació anual estimada (%)"),
+    (ParameterKey.DEFAULT_SCENARIO_TYPE,    ScenarioType.BASE, "string", ParameterCategory.SIMULATION, "Escenari per defecte (adverse/base/optimistic)"),
     # tax (Spain IRPF 2024)
-    ("irpf_bracket_1_limit",      "6000",  "decimal", "tax", "Primer tram IRPF capital: fins a 6.000€ → 19%"),
-    ("irpf_bracket_1_rate",       "19",    "decimal", "tax", "Tipus impositiu primer tram IRPF (%)"),
-    ("irpf_bracket_2_limit",      "50000", "decimal", "tax", "Segon tram IRPF capital: 6.000–50.000€ → 21%"),
-    ("irpf_bracket_2_rate",       "21",    "decimal", "tax", "Tipus impositiu segon tram IRPF (%)"),
-    ("irpf_bracket_3_limit",      "200000","decimal", "tax", "Tercer tram IRPF capital: 50.000–200.000€ → 23%"),
-    ("irpf_bracket_3_rate",       "23",    "decimal", "tax", "Tipus impositiu tercer tram IRPF (%)"),
-    ("irpf_bracket_4_rate",       "26",    "decimal", "tax", "Tipus impositiu quart tram IRPF: >200.000€ (%)"),
+    (ParameterKey.IRPF_BRACKET_1_LIMIT,     "6000",        "decimal", ParameterCategory.TAX,        "Primer tram IRPF capital: fins a 6.000€ → 19%"),
+    (ParameterKey.IRPF_BRACKET_1_RATE,      "19",          "decimal", ParameterCategory.TAX,        "Tipus impositiu primer tram IRPF (%)"),
+    (ParameterKey.IRPF_BRACKET_2_LIMIT,     "50000",       "decimal", ParameterCategory.TAX,        "Segon tram IRPF capital: 6.000–50.000€ → 21%"),
+    (ParameterKey.IRPF_BRACKET_2_RATE,      "21",          "decimal", ParameterCategory.TAX,        "Tipus impositiu segon tram IRPF (%)"),
+    (ParameterKey.IRPF_BRACKET_3_LIMIT,     "200000",      "decimal", ParameterCategory.TAX,        "Tercer tram IRPF capital: 50.000–200.000€ → 23%"),
+    (ParameterKey.IRPF_BRACKET_3_RATE,      "23",          "decimal", ParameterCategory.TAX,        "Tipus impositiu tercer tram IRPF (%)"),
+    (ParameterKey.IRPF_BRACKET_4_RATE,      "26",          "decimal", ParameterCategory.TAX,        "Tipus impositiu quart tram IRPF: >200.000€ (%)"),
     # personal
-    ("monthly_income_net",        "0",    "decimal", "personal", "Ingressos nets mensuals estimats (€)"),
-    ("monthly_expenses_target",   "0",    "decimal", "personal", "Despeses mensuals objectiu (€)"),
-    ("emergency_fund_months",     "6",    "integer", "personal", "Mesos de despeses que ha de cobrir el fons d'emergència"),
+    (ParameterKey.MONTHLY_INCOME_NET,       "0",           "decimal", ParameterCategory.PERSONAL,   "Ingressos nets mensuals estimats (€)"),
+    (ParameterKey.MONTHLY_EXPENSES_TARGET,  "0",           "decimal", ParameterCategory.PERSONAL,   "Despeses mensuals objectiu (€)"),
+    (ParameterKey.EMERGENCY_FUND_MONTHS,    "6",           "integer", ParameterCategory.PERSONAL,   "Mesos de despeses que ha de cobrir el fons d'emergència"),
     # ui
-    ("currency_display",          "EUR",  "string",  "ui", "Moneda de visualització principal"),
-    ("date_format",               "DD/MM/YYYY", "string", "ui", "Format de dates a la UI"),
-    ("chart_animation",           "true", "boolean", "ui", "Activar animacions als gràfics"),
+    (ParameterKey.CURRENCY_DISPLAY,         "EUR",         "string",  ParameterCategory.UI,         "Moneda de visualització principal"),
+    (ParameterKey.DATE_FORMAT,              "DD/MM/YYYY",  "string",  ParameterCategory.UI,         "Format de dates a la UI"),
+    (ParameterKey.CHART_ANIMATION,          "true",        "boolean", ParameterCategory.UI,         "Activar animacions als gràfics"),
 ]
 
 # ── Objectives ───────────────────────────────────────────────────────────────
 OBJECTIVES = [
     {
-        "key": "home_purchase",
+        "key": ObjectiveKey.HOME_PURCHASE,
         "name": "Compra d'habitatge",
         "description": "Capital necessari per a l'entrada d'un pis",
         "objective_type": "purchase",
@@ -247,23 +254,23 @@ OBJECTIVES = [
         "priority": 1,
     },
     {
-        "key": "emergency_fund",
+        "key": ObjectiveKey.EMERGENCY_FUND,
         "name": "Fons d'Emergència",
         "description": "6 mesos de despeses en liquiditat",
         "objective_type": "emergency",
         "target_amount": Decimal("15000.00"),
         "target_date": None,
-        "funding_source": "cash",
+        "funding_source": AssetType.CASH,
         "priority": 0,
     },
 ]
 
 # ── Market Indices ────────────────────────────────────────────────────────────
 MARKET_INDICES = [
-    {"name": "S&P 500", "ticker_yf": "^GSPC", "display_name": "S&P 500", "currency": "USD", "index_type": "equity", "region": "US", "is_default_benchmark": False},
-    {"name": "MSCI World", "ticker_yf": "URTH", "display_name": "MSCI World ETF", "currency": "USD", "index_type": "equity", "region": "Global", "is_default_benchmark": True},
-    {"name": "Euro Stoxx 50", "ticker_yf": "^STOXX50E", "display_name": "Euro Stoxx 50", "currency": "EUR", "index_type": "equity", "region": "Europe", "is_default_benchmark": False},
-    {"name": "EURIBOR 12M", "ticker_yf": "^IRX", "display_name": "EURIBOR 12M", "currency": "EUR", "index_type": "fixed_income", "region": "Europe", "is_default_benchmark": False},
+    {"name": "S&P 500",       "ticker_yf": IndexTicker.SP500,          "display_name": "S&P 500",       "currency": "USD", "index_type": "equity",       "region": "US",     "is_default_benchmark": False},
+    {"name": "MSCI World",    "ticker_yf": IndexTicker.MSCI_WORLD_ETF, "display_name": "MSCI World ETF", "currency": "USD", "index_type": "equity",       "region": "Global", "is_default_benchmark": True},
+    {"name": "Euro Stoxx 50", "ticker_yf": IndexTicker.EURO_STOXX_50,  "display_name": "Euro Stoxx 50",  "currency": "EUR", "index_type": "equity",       "region": "Europe", "is_default_benchmark": False},
+    {"name": "EURIBOR 12M",   "ticker_yf": IndexTicker.EURIBOR_12M,    "display_name": "EURIBOR 12M",    "currency": "EUR", "index_type": "fixed_income", "region": "Europe", "is_default_benchmark": False},
 ]
 
 # ── Dashboard Widgets ─────────────────────────────────────────────────────────
@@ -369,7 +376,6 @@ async def seed() -> None:
 
         # ── Dashboard Widgets ──────────────────────────────────────────────
         for widget_type, display_name, is_visible, sort_order in DASHBOARD_WIDGETS:
-            from modules.preferences.models import DashboardWidget
             existing = await session.scalar(select(DashboardWidget).where(DashboardWidget.widget_type == widget_type))
             if not existing:
                 session.add(DashboardWidget(
