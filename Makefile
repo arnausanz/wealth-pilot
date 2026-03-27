@@ -1,4 +1,4 @@
-.PHONY: dev dev-bg down build rebuild logs ps db-shell migrate migration seed test clean clean-all
+.PHONY: dev dev-bg down build rebuild logs ps db-shell migrate migration seed test check-prices clean clean-all
 
 # ─── Development ──────────────────────────────────────────────────────────────
 
@@ -37,6 +37,21 @@ migration:
 
 seed:
 	docker compose exec backend python scripts/seed.py
+
+check-prices:
+	docker compose exec db sh -c 'psql -U $$POSTGRES_USER -d $$POSTGRES_DB -c "\
+SELECT a.display_name, a.ticker_yf, a.asset_type, \
+       ph.price_close, ph.currency, ph.price_date, \
+       (CURRENT_DATE - ph.price_date) AS days_old \
+FROM assets a \
+LEFT JOIN LATERAL ( \
+    SELECT price_close, currency, price_date \
+    FROM price_history \
+    WHERE asset_id = a.id \
+    ORDER BY price_date DESC LIMIT 1 \
+) ph ON TRUE \
+WHERE a.is_active = TRUE \
+ORDER BY a.sort_order;"'
 
 # ─── Tests ────────────────────────────────────────────────────────────────────
 
