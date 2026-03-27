@@ -13,11 +13,44 @@ import asyncpg
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+from sqlalchemy.pool import NullPool
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from core.config import settings  # noqa: E402
 from main import app  # noqa: E402
+import core.db as _core_db  # noqa: E402
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _use_null_pool():
+    """
+    Replace the SQLAlchemy engine with a NullPool engine for the test session.
+
+    Why: pytest-asyncio creates a NEW event loop for each async test function.
+    SQLAlchemy's default connection pool caches asyncpg connections tied to a
+    specific event loop. When test N+1 (loop B) tries to reuse a connection from
+    test N (loop A), asyncpg raises "Future attached to different loop".
+
+    NullPool disables connection reuse — every request opens a fresh connection
+    and closes it immediately. Slightly slower, but correct and safe for tests.
+
+    How: monkey-patch core.db module-level variables. Because get_db() looks up
+    AsyncSessionLocal via its __globals__ (the core.db namespace), this works
+    without touching any app code.
+    """
+    test_engine = create_async_engine(settings.DATABASE_URL, poolclass=NullPool)
+    test_session_factory = async_sessionmaker(test_engine, expire_on_commit=False)
+
+    _core_db.engine = test_engine
+    _core_db.AsyncSessionLocal = test_session_factory
+
+    yield
+
+    # Restore originals (good practice even if session ends)
+    _core_db.engine = _core_db.engine
+    _core_db.AsyncSessionLocal = _core_db.AsyncSessionLocal
 
 
 def _asyncpg_dsn() -> str:

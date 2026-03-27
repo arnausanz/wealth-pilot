@@ -22,10 +22,11 @@ backend/
 │       ├── service.py  Lògica de negoci (async functions)
 │       └── router.py   FastAPI router (endpoints)
 ├── tests/
-│   ├── conftest.py     Fixtures compartides (db_conn, http_client)
-│   ├── test_api.py     Tests dels endpoints FastAPI
-│   ├── test_database.py Tests d'estructura de la BD
-│   └── test_seed.py    Tests de les dades inicials
+│   ├── conftest.py       Fixtures compartides (_use_null_pool, db_conn, http_client)
+│   ├── test_api.py       Tests dels endpoints FastAPI base
+│   ├── test_database.py  Tests d'estructura de la BD
+│   ├── test_seed.py      Tests de les dades inicials
+│   └── test_market.py    Tests del mòdul de mercat
 ├── scripts/
 │   └── seed.py         Seed idempotent
 ├── alembic/
@@ -33,7 +34,7 @@ backend/
 │   ├── script.py.mako  Template de migracions
 │   └── versions/       Fitxers de migració generats
 ├── alembic.ini
-├── main.py             App FastAPI (< 50 línies)
+├── main.py             App FastAPI (< 80 línies)
 ├── pytest.ini
 └── requirements.txt
 ```
@@ -69,6 +70,34 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 ```
 
 `get_db()` és el dependency per a tots els routers: `session: AsyncSession = Depends(get_db)`.
+
+**Nota de tests:** `get_db()` accedeix a `AsyncSessionLocal` via els seus `__globals__` (el namespace del mòdul `core.db`). Per tant, el fixture `_use_null_pool` de conftest.py pot monkey-patchar `core.db.AsyncSessionLocal` i `get_db()` veurà el nou valor automàticament — sense cap canvi al codi de producció.
+
+---
+
+## `main.py` — App FastAPI amb Lifespan
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Gap fill automàtic a l'arrencada: descarrega preus que falten a la BD."""
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await market_service.fill_all_gaps(db)
+    except Exception as exc:
+        logger.error("Startup gap fill failed (non-fatal): %s", exc)
+    yield
+
+app = FastAPI(lifespan=lifespan, ...)
+```
+
+El servidor arrenca sempre, fins i tot si Yahoo Finance és inaccessible (el `try/except` ho garanteix). En cada reinici, la BD es posa al dia automàticament.
+
+**Afegir nous mòduls (2 línies):**
+```python
+from modules.nom_modul.router import router as nom_router
+app.include_router(nom_router, prefix="/api/v1")
+```
 
 ---
 
@@ -131,6 +160,7 @@ Tots els errors segueixen el mateix format JSON:
 
 ## Endpoints Actuals
 
+### Sistema
 | Mètode | Ruta | Descripció |
 |--------|------|-----------|
 | `GET` | `/health` | Status, versió i entorn |
@@ -138,6 +168,14 @@ Tots els errors segueixen el mateix format JSON:
 | `GET` | `/api/docs` | Swagger UI (autogenerat) |
 | `GET` | `/api/redoc` | ReDoc (autogenerat) |
 | `GET` | `/api/openapi.json` | Esquema OpenAPI JSON |
+
+### Mòdul Market (`/api/v1/market`)
+| Mètode | Ruta | Descripció |
+|--------|------|-----------|
+| `GET` | `/api/v1/market/prices` | Preus actuals de tots els assets actius (amb cache 5 min) |
+| `GET` | `/api/v1/market/prices/{asset_id}` | Preu actual d'un asset concret |
+| `POST` | `/api/v1/market/refresh` | Desencadena un gap fill des de Yahoo Finance |
+| `GET` | `/api/v1/market/history/{asset_id}?days=30` | Historial OHLCV (1–3650 dies) |
 
 ---
 

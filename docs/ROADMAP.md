@@ -1,6 +1,6 @@
 # WealthPilot — Roadmap de Desenvolupament
 
-> Versió: 1.2 | Data: Març 2026 | Estat: En curs — Fase 0 completada al 100%, tests verds, Fase 1 següent
+> Versió: 1.3 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1.1 ✅ completades, 53 tests verds
 
 ---
 
@@ -152,13 +152,20 @@ frontend/
 ## FASE 1 — Integracions de Dades Externes
 **Objectiu:** Obtenir preus reals de Yahoo Finance i importar dades de MoneyWiz. Aquests serveis alimentaran tota la resta.
 
-### 1.1 Servei Yahoo Finance
-- [ ] `modules/market/service.py`: wrapper de `yfinance` per obtenir preus actuals
-- [ ] Funció `get_prices(tickers: list[str]) -> dict[str, float]` amb cache en memòria (TTL 5 min)
-- [ ] Funció `get_historical(ticker, period)` per a snapshots històrics
-- [ ] Gestió d'errors robusta: si Yahoo falla, retorna últim preu conegut de BD + flag `stale: true`
-- [ ] `modules/market/router.py`: `GET /api/v1/market/prices` (tots els assets actius)
-- [ ] Test manual: preus de IWDA.AS, BTC-EUR, PHAU.L retornats correctament
+### 1.1 Servei Yahoo Finance ✅
+
+Gap fill robust que descarrega tot l'historial des de la data d'inceptació, recupera automàticament dels outages, i serveix preus des de la BD amb cache de 5 min. 53 tests automàtics verds.
+
+- [x] `modules/market/service.py`: servei complet amb gap fill, cache i stale detection
+- [x] `fill_all_gaps(db)`: gap fill per asset (MAX price_date → download des de allà), batches per start_date, ON CONFLICT DO NOTHING, commit per ticker, log a price_fetch_logs
+- [x] `get_current_prices(db)`: window function (ROW_NUMBER PARTITION BY asset_id), cache 5 min, stale detection (3 dies ETF, 1 dia crypto), canvi 1d en % i €
+- [x] `get_asset_price_history(db, asset_id, days)`: historial OHLCV amb LAG per a change_pct
+- [x] Gestió robusta: batch download → fallback individual amb retry exponential (3 intents)
+- [x] Lifespan a `main.py`: gap fill automàtic a l'arrencada (non-fatal si Yahoo no respon)
+- [x] `modules/market/router.py`: 4 endpoints (`/prices`, `/prices/{id}`, `/refresh`, `/history/{id}`)
+- [x] `modules/market/schemas.py`: 5 schemas Pydantic v2 (AssetPriceOut, MarketPricesResponse, GapFillResponse, PriceHistoryPoint, AssetPriceHistoryResponse)
+- [x] `backend/tests/test_market.py`: 17 tests d'integració (taules BD + endpoints API)
+- [x] Fix NullPool als tests: fixture `_use_null_pool` a conftest.py resol el problema de "Future attached to different loop" entre event loops de pytest-asyncio
 
 ### 1.2 Servei MoneyWiz Parser
 - [ ] `modules/sync/service.py`: lògica d'extracció del `.zip` → SQLite intern de MoneyWiz

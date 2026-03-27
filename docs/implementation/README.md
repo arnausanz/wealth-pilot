@@ -10,3 +10,4 @@ Documentació tècnica del projecte WealthPilot. Un fitxer per àrea, actualitza
 | [04-frontend-core.md](04-frontend-core.md) | SPA vanilla JS, PWA, router, API client, event bus, sistema de disseny, com afegir una pantalla |
 | [05-tests.md](05-tests.md) | Pytest, fixtures, cobertura, filosofia integració vs. mocking |
 | [06-desplegament.md](06-desplegament.md) | Docker Compose local, Systemd Oracle Cloud, variables d'entorn, Nginx, HTTPS |
+| [07-modul-market.md](07-modul-market.md) | Yahoo Finance, gap fill, cache, stale detection, window function query, endpoints |
