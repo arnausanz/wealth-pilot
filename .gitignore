@@ -39,6 +39,11 @@ yarn-error.log*
 *.dump
 /backups/
 
+# ─── MoneyWiz exports (dades personals, mai al repo) ─────────────────────────
+/data/moneywiz/*.zip
+/data/moneywiz/*.sqlite
+/data/moneywiz/*.db
+
 # ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
 /logs/

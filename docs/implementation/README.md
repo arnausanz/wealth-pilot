@@ -11,3 +11,4 @@ Documentació tècnica del projecte WealthPilot. Un fitxer per àrea, actualitza
 | [05-tests.md](05-tests.md) | Pytest, fixtures, cobertura, filosofia integració vs. mocking |
 | [06-desplegament.md](06-desplegament.md) | Docker Compose local, Systemd Oracle Cloud, variables d'entorn, Nginx, HTTPS |
 | [07-modul-market.md](07-modul-market.md) | Yahoo Finance, gap fill, cache, stale detection, window function query, endpoints |
+| [08-modul-sync.md](08-modul-sync.md) | MoneyWiz parser, Core Data SQLite, idempotència, jerarquia categories, endpoints |

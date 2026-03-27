@@ -10,6 +10,7 @@ from core.errors import register_error_handlers
 from core.logging import setup_logging
 from modules.market import service as market_service
 from modules.market.router import router as market_router
+from modules.sync.router import router as sync_router
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,7 @@ register_error_handlers(app)
 # Afegir nous mòduls aquí. El reste del codi no es toca mai.
 
 app.include_router(market_router, prefix="/api/v1")
+app.include_router(sync_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["system"])

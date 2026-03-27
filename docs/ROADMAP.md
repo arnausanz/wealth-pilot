@@ -1,6 +1,6 @@
 # WealthPilot — Roadmap de Desenvolupament
 
-> Versió: 1.3 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1.1 ✅ completades, 53 tests verds
+> Versió: 1.4 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1.1 ✅ + Fase 1.2 ✅ completades, 87 tests verds
 
 ---
 
@@ -167,15 +167,16 @@ Gap fill robust que descarrega tot l'historial des de la data d'inceptació, rec
 - [x] `backend/tests/test_market.py`: 17 tests d'integració (taules BD + endpoints API)
 - [x] Fix NullPool als tests: fixture `_use_null_pool` a conftest.py resol el problema de "Future attached to different loop" entre event loops de pytest-asyncio
 
-### 1.2 Servei MoneyWiz Parser
-- [ ] `modules/sync/service.py`: lògica d'extracció del `.zip` → SQLite intern de MoneyWiz
-- [ ] Parser de comptes (`mw_accounts`): nom, tipus, moneda, balanç
-- [ ] Parser de categories (`mw_categories`): jerarquia de categories de despeses
-- [ ] Parser de transaccions (`mw_transactions`): data, import, categoria, compte, descripció
-- [ ] Parser de transaccions d'inversió: mapatge MoneyWiz ticker → Yahoo ticker
-- [ ] Importació idempotent: `INSERT ... ON CONFLICT DO NOTHING` — pujar el mateix backup 2 vegades = 0 duplicats
-- [ ] `modules/sync/router.py`: `POST /api/v1/sync/upload` (multipart, accepta `.zip`)
-- [ ] `GET /api/v1/sync/status`: última sincronització, nombre de registres, errors
+### 1.2 Servei MoneyWiz Parser ✅
+- [x] `modules/sync/service.py`: lògica d'extracció del `.zip` → SQLite intern de MoneyWiz (Core Data, una sola taula ZSYNCOBJECT)
+- [x] Parser de comptes (`mw_accounts`): 7 tipus (checking, savings, cash, credit, loan, investment, forex)
+- [x] Parser de categories (`mw_categories`): jerarquia resoluble en 2 passos (pares primer, self-join per FKs)
+- [x] Parser de transaccions (`mw_transactions`): 6 tipus, imports positius, timestamps Apple epoch, category via JOIN
+- [x] Parser de transaccions d'inversió: `investment_buy` i `investment_sell` a `mw_transactions`
+- [x] Importació idempotent: `ON CONFLICT (mw_internal_id) DO NOTHING` per tx, `DO UPDATE` per comptes/categories
+- [x] `modules/sync/router.py`: `POST /api/v1/sync/upload`, `GET /api/v1/sync/status`, `GET /api/v1/sync/batches`
+- [x] Audit trail complet: `ImportBatch` sempre es crea (status=failed si hi ha error)
+- [x] 34 tests: schema BD, parser pur (sense BD), endpoints + test d'idempotència
 
 ### 1.3 Snapshot de Net Worth
 - [ ] Funció `generate_snapshot()`: preu actual × unitats per asset + cash = net worth diari
