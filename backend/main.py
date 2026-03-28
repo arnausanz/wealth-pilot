@@ -8,6 +8,7 @@ from core.config import settings
 from core.db import AsyncSessionLocal
 from core.errors import register_error_handlers
 from core.logging import setup_logging
+from modules.analytics.router import router as analytics_router
 from modules.config.router import router as config_router
 from modules.history.router import router as history_router
 from modules.market import service as market_service
@@ -61,6 +62,7 @@ register_error_handlers(app)
 # ─── Routers ──────────────────────────────────────────────────────────────────
 # Afegir nous mòduls aquí. El reste del codi no es toca mai.
 
+app.include_router(analytics_router)
 app.include_router(market_router, prefix="/api/v1")
 app.include_router(networth_router)
 app.include_router(portfolio_router)

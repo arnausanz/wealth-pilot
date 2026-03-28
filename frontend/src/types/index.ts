@@ -314,3 +314,98 @@ export interface WeightCheckResponse {
   is_valid: boolean;
   message: string;
 }
+
+// ─── Analytics ────────────────────────────────────────────────────────────────
+
+export interface ExpenseCategory {
+  category: string;
+  total_eur: string | number;
+  pct_of_total: string | number;
+  tx_count: number;
+  color_hex: string | null;
+}
+export interface ExpenseBreakdownResponse {
+  year: number;
+  month: number | null;
+  categories: ExpenseCategory[];
+  total_eur: string | number;
+}
+export interface CashflowMonth {
+  month: string;
+  income_eur: string | number;
+  expenses_eur: string | number;
+  investments_eur: string | number;
+  savings_eur: string | number;
+  savings_rate_pct: string | number | null;
+}
+export interface CashflowResponse {
+  months: CashflowMonth[];
+  avg_income: string | number;
+  avg_expenses: string | number;
+  avg_savings_rate_pct: string | number | null;
+}
+export interface NetWorthMonth {
+  month: string;
+  total_net_worth: string | number;
+  investment_value: string | number;
+  cash_value: string | number;
+}
+export interface NetWorthEvolutionResponse {
+  months: NetWorthMonth[];
+}
+export interface AnalyticsAlert {
+  id: string;
+  severity: 'info' | 'warning' | 'critical';
+  title: string;
+  detail: string;
+  category: string | null;
+}
+export interface AlertsResponse {
+  alerts: AnalyticsAlert[];
+}
+
+// ─── Open Simulator ───────────────────────────────────────────────────────────
+
+export interface SimulationOut {
+  id: number;
+  name: string;
+  description: string | null;
+  base_scenario_type: string;
+  horizon_months: number;
+  is_pinned: boolean;
+  created_at: string;
+}
+export interface SimulationEventOut {
+  id: number;
+  simulation_id: number;
+  event_date: string;
+  name: string;
+  event_type: string;
+  amount: string | number;
+  is_permanent: boolean;
+  notes: string | null;
+}
+export interface SimulationDetailOut {
+  id: number;
+  name: string;
+  description: string | null;
+  base_scenario_type: string;
+  horizon_months: number;
+  is_pinned: boolean;
+  events: SimulationEventOut[];
+}
+export interface ProjectionSeries {
+  sim_id: number | null;
+  name: string;
+  color: string;
+  annual_return_pct: string | number;
+  data_points: (string | number)[];
+  end_value: string | number;
+  total_contributions_eur: string | number;
+  total_return_eur: string | number;
+}
+export interface CompareResponse {
+  horizon_years: number;
+  start_value: string | number;
+  series: ProjectionSeries[];
+}

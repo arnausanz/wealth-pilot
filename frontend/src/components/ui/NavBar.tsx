@@ -1,12 +1,13 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { HomeIcon, PortfolioIcon, ChartIcon, ListIcon, GearIcon } from '../icons/Icons';
+import { HomeIcon, PortfolioIcon, ChartIcon, ListIcon, GearIcon, AnalyticsIcon } from '../icons/Icons';
 
 const NAV_ITEMS = [
-  { icon: 'home', label: 'Inici', path: '/' },
-  { icon: 'portfolio', label: 'Cartera', path: '/portfolio' },
-  { icon: 'chart', label: 'Sim', path: '/simulation' },
-  { icon: 'list', label: 'Historial', path: '/history' },
-  { icon: 'gear', label: 'Config', path: '/settings' },
+  { icon: 'home',      label: 'Inici',     path: '/' },
+  { icon: 'portfolio', label: 'Cartera',   path: '/portfolio' },
+  { icon: 'chart',     label: 'Sim',       path: '/simulation' },
+  { icon: 'analytics', label: 'Analítica', path: '/analytics' },
+  { icon: 'list',      label: 'Historial', path: '/history' },
+  { icon: 'gear',      label: 'Config',    path: '/settings' },
 ] as const;
 
 function NavIcon({ icon, color }: { icon: string; color: string }) {
@@ -19,6 +20,8 @@ function NavIcon({ icon, color }: { icon: string; color: string }) {
       return <ChartIcon color={color} />;
     case 'list':
       return <ListIcon color={color} />;
+    case 'analytics':
+      return <AnalyticsIcon color={color} />;
     case 'gear':
       return <GearIcon color={color} />;
     default:
@@ -70,7 +73,7 @@ export function NavBar() {
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              padding: '4px 12px',
+              padding: '4px 8px',
             }}
           >
             <span

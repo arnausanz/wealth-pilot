@@ -3,6 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { ProjectionChart } from '../../components/charts/ProjectionChart';
 import { useProjection, useScenariosInfo } from '../../hooks/useSimulation';
 import { n } from '../../types';
+import { OpenSimulator } from './OpenSimulator';
 
 // Retarda les peticions a l'API mentre l'slider es mou
 function useDebounce<T>(value: T, delay: number): T {
@@ -264,7 +265,10 @@ function ContributionInfo({
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
+type SimTab = 'projection' | 'custom';
+
 export function SimulationScreen() {
+  const [simTab, setSimTab] = useState<SimTab>('projection');
   const [horizonYears, setHorizonYears] = useState(10);
   // Debounce per evitar peticions a l'API en cada tick del slider
   const debouncedHorizon = useDebounce(horizonYears, 350);
@@ -309,6 +313,41 @@ export function SimulationScreen() {
             >
               Simulació
             </div>
+            {/* Tab bar */}
+            <div
+              style={{
+                display: 'flex',
+                gap: 0,
+                marginTop: 12,
+                borderBottom: '1px solid var(--color-glass-border)',
+              }}
+            >
+              {(['projection', 'custom'] as SimTab[]).map((t) => {
+                const label = t === 'projection' ? 'Projecció' : 'Personalitzat';
+                const active = simTab === t;
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setSimTab(t)}
+                    style={{
+                      padding: '8px 16px',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: `2px solid ${active ? 'var(--color-accent)' : 'transparent'}`,
+                      color: active ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                      fontSize: 12,
+                      fontFamily: 'var(--font-num)',
+                      fontWeight: active ? 600 : 400,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
             {startValue > 0 && (
               <div
                 style={{
@@ -352,6 +391,15 @@ export function SimulationScreen() {
           </div>
         </div>
       </div>
+
+      {simTab === 'custom' && (
+        <div style={{ marginTop: 16 }}>
+          <OpenSimulator />
+        </div>
+      )}
+
+      {/* Projection tab content */}
+      {simTab === 'projection' && <>
 
       {/* Slider */}
       <HorizonSlider value={horizonYears} onChange={setHorizonYears} />
@@ -546,6 +594,8 @@ export function SimulationScreen() {
           </Card>
         </div>
       )}
+
+      </>}
     </div>
   );
 }

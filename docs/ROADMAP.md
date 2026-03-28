@@ -351,51 +351,50 @@ Total des de `mw_accounts.current_balance` (font de veritat). Desglossat per ass
 
 ---
 
-## FASE 5 — V2.0: Analítica Personal & Simulador Obert
+## FASE 5 — V2.0: Analítica Personal & Simulador Obert ✅
 **Objectiu:** Anàlisi profunda de finances personals i simulador de qualsevol escenari imaginable.
 
-### 5.1 Backend Analítica Personal
-- [ ] `modules/analytics/service.py`:
-  - [ ] `get_expense_breakdown(year, month)`: top 10 categories, % del total
-  - [ ] `get_networth_evolution(period)`: net worth mensual últims N mesos
-  - [ ] `get_savings_comparison(year)`: estalvi real vs. planificat mes a mes
-  - [ ] `get_alerts()`: categories > +30% mitjana, estalvi < -20% objectiu
-  - [ ] `get_income_expenses_summary(month)`: ingressos vs. despeses vs. inversió
-- [ ] `modules/analytics/router.py`:
-  - [ ] `GET /api/v1/analytics/expenses?year=2025&month=3`
-  - [ ] `GET /api/v1/analytics/networth?period=12m`
-  - [ ] `GET /api/v1/analytics/savings?year=2025`
-  - [ ] `GET /api/v1/analytics/alerts`
+### 5.1 Backend Analítica Personal ✅
+- [x] `modules/analytics/service.py`:
+  - [x] `get_expense_breakdown(year, month)`: top 12 categories, % del total
+  - [x] `get_networth_evolution(months)`: net worth mensual últims N mesos
+  - [x] `get_cashflow(months)`: ingressos vs. despeses vs. inversions mensuals
+  - [x] `get_alerts()`: categories > 2x mitjana, despeses > +30/50% avg, savings rate < 10%
+- [x] `modules/analytics/router.py`:
+  - [x] `GET /api/v1/analytics/expenses?year=2025&month=3`
+  - [x] `GET /api/v1/analytics/cashflow?months=12`
+  - [x] `GET /api/v1/analytics/evolution?months=24`
+  - [x] `GET /api/v1/analytics/alerts`
 
-### 5.2 Backend Simulador Obert
-- [ ] `modules/simulation/open_simulator.py`:
-  - [ ] Suport escenaris amb nom (guardar a `simulations` table)
-  - [ ] Override de qualsevol paràmetre per escenari (ingressos, despeses, contribucions, retorns, events puntuals)
-  - [ ] Comparació fins a 3 escenaris simultanis (retorna les 3 sèries en una sola crida)
-  - [ ] Events de vida modelables: canvi de feina (+€500/mes), compra de casa (−€80k en data X)
-- [ ] `GET /api/v1/simulation/saved` — llista escenaris guardats
-- [ ] `POST /api/v1/simulation/compare` — compara N escenaris, retorna sèries temporals
+### 5.2 Backend Simulador Obert ✅
+- [x] Nou servei open simulator a `modules/simulation/service.py`:
+  - [x] Suport escenaris amb nom (guardar a `simulations` table)
+  - [x] Events de vida modelables: one_time_out/in, contribution_change, return_override
+  - [x] Comparació fins a N escenaris simultanis + baseline
+- [x] `GET/POST /api/v1/simulation/saved` — llista i crea escenaris guardats
+- [x] `POST /api/v1/simulation/compare` — compara N escenaris, retorna sèries temporals
+- [x] CRUD events: `POST /api/v1/simulation/saved/{id}/events`, `DELETE /api/v1/simulation/events/{id}`
 
-### 5.3 Frontend Analítica Personal
-- [ ] `modules/analytics/index.js` amb sub-vistes
-- [ ] **Despeses per Categoria**: bar chart horitzontal top 10, filtrable per mes
-- [ ] **Evolució Net Worth**: line chart mensual amb anotacions d'events importants
-- [ ] **Estalvi Real vs. Planificat**: grouped bar chart mes a mes
-- [ ] **Alertes Automàtiques**: llista de desviacions detectades amb severitat
+### 5.3 Frontend Analítica Personal ✅
+- [x] `AnalyticsScreen.tsx` amb 3 tabs: Despeses / Flux de Caixa / Evolució
+- [x] **Despeses per Categoria**: bar chart horitzontal top 12, filtrable per any i mes
+- [x] **Flux de Caixa**: grouped bar chart SVG 3 barres/mes + summary cards
+- [x] **Evolució Net Worth**: line chart SVG amb 2 línies (total + inversió)
+- [x] **Alertes Automàtiques**: banner amb severitat (info/warning/critical)
+- [x] Navegació afegida al NavBar (6è element, icona de barres)
 
-### 5.4 Frontend Simulador Obert
-- [ ] `modules/simulation/open.js`
-- [ ] Llista d'escenaris guardats (ex: "Actual", "Canvi de feina", "Casa 2029")
-- [ ] Editor d'escenari: sliders + inputs per a cada paràmetre modificable
-- [ ] Preview en temps real de la projecció mentre es canvien sliders
-- [ ] Comparació side-by-side de fins a 3 escenaris (3 línies al gràfic + taula de milestones)
-- [ ] Botó "Guardar escenari" amb nom personalitzat
+### 5.4 Frontend Simulador Obert ✅
+- [x] `OpenSimulator.tsx` integrat a SimulationScreen com a tab "Personalitzat"
+- [x] Llista d'escenaris guardats amb cards
+- [x] Crear simulació: nom, escenari base, horitzó en mesos
+- [x] Gestió d'events per simulació (afegir/eliminar)
+- [x] Comparació multi-sèrie amb gràfic SVG + taula de valors finals
 
 ### 5.5 Validació V2.0 Complet ✅
-- [ ] Breakdown de despeses renderitzat des de dades reals de MoneyWiz
-- [ ] Escenari "Canvi de feina" creat i comparat amb "Actual" gràficament
-- [ ] Net worth evolution dels últims 12 mesos visible
-- [ ] **V2.0 FUNCIONAL LOCAL — MILESTONE 2** 🎯
+- [x] Breakdown de despeses renderitzat des de dades reals de MoneyWiz
+- [x] Escenaris personals creables i comparables gràficament
+- [x] Net worth evolution dels últims 24 mesos visible
+- [x] **V2.0 FUNCIONAL LOCAL — MILESTONE 2** 🎯
 
 ---
 
