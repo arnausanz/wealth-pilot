@@ -293,7 +293,8 @@ class TestMoneyWizParser:
         assert acc["currency"] == "EUR"
         assert acc["is_active"] is True
         assert acc["include_in_networth"] is True
-        assert acc["current_balance"] == pytest.approx(1500.0)
+        # Balanç calculat des de transaccions: 0 (opening) + 2500 (income) - 45.50 (expense) + 300 (transfer_in) = 2754.50
+        assert acc["current_balance"] == pytest.approx(2754.50)
 
     def test_parser_investment_account_type(self):
         data = self._parse()

@@ -2,12 +2,13 @@
 modules/networth/service.py — Generació de snapshots de net worth.
 
 Estratègia de càlcul:
-  - TOTAL NET WORTH: font de veritat = mw_accounts.current_balance (el que MoneyWiz
-    mostra al moment del darrer backup, actualitzat pels preus interns de MW).
-  - BREAKDOWN PER ASSET (asset_snapshots): calculat des de transaccions d'inversió
-    (shares acumulats × preu actual de Yahoo Finance). Informatiu, pot diferir
-    lleugerament del total si hi ha actius no mapejats (e.g., NUKL).
-  - CASH: sum de comptes checking/savings/cash amb include_in_networth=True.
+  - CASH: sum de mw_accounts (checking/savings/cash/forex) + cash no invertit
+    en comptes d'inversió (mw_accounts.current_balance per a investment = EUR líquid
+    sense invertir, e.g. els 5.7k€ a Trade Republic que no estan en ETFs).
+  - INVESTMENT PORTFOLIO: shares acumulades × preu actual de Yahoo Finance.
+    Nota: actius no mapejats (e.g. NUKL sense ticker_mw) no queden inclosos.
+  - LIABILITIES: sum de mw_accounts credit/loan.
+  - TOTAL NET WORTH = cash + investment_portfolio - liabilities.
 
 Trigger:
   - Cridat automàticament des de sync.service.process_upload() post-import MW.
