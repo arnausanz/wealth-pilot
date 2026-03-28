@@ -302,36 +302,52 @@ Total des de `mw_accounts.current_balance` (font de veritat). Desglossat per ass
 
 ---
 
-## FASE 4 — V2.0: Gestió de Configuració via UI
+## FASE 4 — V2.0: Gestió de Configuració via UI ✅
 **Objectiu:** Zero fitxers de configuració. Tot editable des de la interfície.
+**Estat:** Completada al 100%. Backend CRUD complet + SettingsScreen amb 5 seccions + toast feedback.
 
-### 4.1 Backend Config APIs (CRUD complet)
-- [ ] `modules/config/router.py` amb endpoints per a:
-  - [ ] `GET/PUT /api/v1/config/assets` — llistar i editar assets (nom, ticker, target weight, actiu/inactiu)
-  - [ ] `POST /api/v1/config/assets` — afegir nou asset
-  - [ ] `GET/PUT /api/v1/config/contributions` — contribucions mensuals (import, dia del mes, asset destí)
-  - [ ] `GET/PUT /api/v1/config/extraordinary` — contribucions extraordinàries (data futura, import, asset)
-  - [ ] `GET/PUT /api/v1/config/scenarios` — retorns esperats per escenari i asset
-  - [ ] `GET/PUT /api/v1/config/objectives` — objectius financers (home purchase: preu, data, % necessari)
-  - [ ] `GET/PUT /api/v1/config/parameters` — paràmetres globals (balanç cash, tipus d'interès, etc.)
-- [ ] Validació estricta: target weights han de sumar 100% (o alerta si no)
-- [ ] Historial de canvis en `parameters` (qui canvià què i quan, per auditoria)
+### 4.1 Backend Config APIs (CRUD complet) ✅
+> `modules/config/` — schemas.py, service.py, router.py. Raw SQL async amb SQLAlchemy. SET clauses dinàmics per a PATCH. Upsert per a escenaris.
 
-### 4.2 Frontend Configuració
-- [ ] `modules/config/index.js` — menú de configuració amb sub-seccions
-- [ ] **Gestió d'Assets**: taula editable inline, toggle actiu/inactiu, afegir nou asset amb formulari
-- [ ] **Contribucions Mensuals**: llista amb import i asset editable, indicador "pròxima execució"
-- [ ] **Contribucions Extraordinàries**: calendari o llista, marcar com executada
-- [ ] **Escenaris de Retorn**: grid d'inputs (asset × escenari = % anual)
-- [ ] **Objectius Financers**: formulari per editar home purchase goal, afegir nous objectius
-- [ ] **Paràmetres Globals**: formulari genèric que llegeix la `parameters` table dinàmicament
-- [ ] Feedback visual: toast de confirmació en guardar, vermell si hi ha error de validació
+- [x] `modules/config/schemas.py`: AssetConfigOut/Patch/Create, ContributionOut/Patch/Create, ScenarioRow/Patch, ObjectiveOut/Patch, ParameterOut/Patch
+- [x] `modules/config/service.py`: CRUD async per a les 5 entitats; `get_total_target_weight()` per validació
+- [x] `modules/config/router.py` amb 14 endpoints:
+  - [x] `GET /api/v1/config/assets` — 8 assets amb target_weight, is_active, ticker_yf
+  - [x] `POST /api/v1/config/assets` — crear nou asset
+  - [x] `PATCH /api/v1/config/assets/{id}` — editar qualsevol camp
+  - [x] `GET /api/v1/config/assets/weight-check` — suma target_weight dels actius actius
+  - [x] `GET/POST/PATCH/DELETE /api/v1/config/contributions` — 7 contribucions (€575/mes total)
+  - [x] `GET /api/v1/config/scenarios` — matriu 8×3 (assets × escenaris)
+  - [x] `PATCH /api/v1/config/scenarios/{asset_id}/{scenario_type}` — upsert retorn esperat
+  - [x] `GET/PATCH /api/v1/config/objectives` — 2 objectius (fons emergència + habitatge)
+  - [x] `GET/PATCH /api/v1/config/parameters` — 19 paràmetres editables (personal/portfolio/simulation/tax/ui)
+- [x] Validació: weight-check retorna alerta si la suma ≠ 100% (ara 87%, 13% pendent Cash)
+- [x] `core/api.ts` ampliat amb `patch()` i `del()` per suportar PATCH i DELETE des del frontend
 
-### 4.3 Validació Fase 4
-- [ ] Afegir un nou asset des de la UI → apareix immediatament al portfolio
-- [ ] Modificar target weight → rebalanceig actualitzat al dashboard
-- [ ] Canviar retorns d'escenari → simulació recalculada automàticament
-- [ ] Tots els canvis persistits a PostgreSQL
+### 4.2 Frontend Configuració ✅
+> `features/settings/SettingsScreen.tsx` + `hooks/useConfig.ts`. Inline editing sense formularis —tap sobre el valor per editar.
+
+- [x] `hooks/useConfig.ts`: 12 hooks TanStack Query (useQuery + useMutation) per a totes les entitats
+  - Invalidació automàtica de queries relacionades (canvi escenari → invalida simulació)
+- [x] `features/settings/SettingsScreen.tsx` amb 5 tabs scrollables:
+  - [x] **Assets**: pes objectiu editable inline, ticker YF, toggle actiu/inactiu per asset; badge weight-check
+  - [x] **Aportacions**: import mensual + dia del mes editables, toggle activa; total actiu destacat
+  - [x] **Escenaris**: grid compact asset × (advers/base/optimista), valors editables inline per cel·la
+  - [x] **Objectius**: target_amount, target_date, toggle actiu per objectiu
+  - [x] **Paràmetres**: agrupats per categoria (personal/portfolio/simulation/tax/ui), tots editables
+- [x] `InlineField`: component reutilitzable per tap-to-edit (Enter guarda, Escape cancel·la)
+- [x] `ToggleField`: switch animat per booleans
+- [x] `Toast`: notificació success/error (2.4s, animació slideDown, bottom-centered)
+- [x] Tabs scroll horitzontal (overflow-x: auto) per encaixar en 390px
+
+### 4.3 Validació Fase 4 ✅
+- [x] 8 assets llistats amb pesos, tickers, toggle actiu/inactiu
+- [x] 7 contribucions editables (total €575/mes actiu)
+- [x] Matriu 8×3 escenaris: advers 2.42%, base 6.38%, optimista 10.34% (ponderats)
+- [x] 2 objectius (fons emergència €15k, habitatge €80k)
+- [x] 19 paràmetres editables agrupats per categoria
+- [x] Toast de confirmació en cada guardat
+- [x] Canvis persistits a PostgreSQL via PATCH/POST/DELETE
 
 ---
 

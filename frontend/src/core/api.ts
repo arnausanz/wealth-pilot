@@ -24,4 +24,25 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export const api = { get, post };
+async function patch<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`PATCH ${path} failed (${res.status}): ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
+async function del(path: string): Promise<void> {
+  const res = await fetch(`${BASE}${path}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`DELETE ${path} failed (${res.status}): ${text}`);
+  }
+}
+
+export const api = { get, post, patch, del };

@@ -4,47 +4,7 @@ import { DashboardScreen } from './features/dashboard/DashboardScreen';
 import { PortfolioScreen } from './features/portfolio/PortfolioScreen';
 import { SimulationScreen } from './features/simulation/SimulationScreen';
 import { HistoryScreen } from './features/history/HistoryScreen';
-
-function PlaceholderScreen({ title }: { title: string }) {
-  return (
-    <div
-      style={{
-        background: 'var(--color-bg)',
-        minHeight: '100vh',
-        fontFamily: 'var(--font-body)',
-        color: 'var(--color-text)',
-        maxWidth: 430,
-        margin: '0 auto',
-        paddingBottom: 88,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 12,
-      }}
-    >
-      <div
-        style={{
-          fontSize: 24,
-          fontWeight: 700,
-          letterSpacing: '-0.02em',
-          fontFamily: 'var(--font-display)',
-        }}
-      >
-        {title}
-      </div>
-      <div
-        style={{
-          fontSize: 13,
-          color: 'var(--color-text-tertiary)',
-          fontFamily: 'var(--font-num)',
-        }}
-      >
-        Pròximament
-      </div>
-    </div>
-  );
-}
+import { SettingsScreen } from './features/settings/SettingsScreen';
 
 export default function App() {
   return (
@@ -62,10 +22,7 @@ export default function App() {
           <Route path="/portfolio" element={<PortfolioScreen />} />
           <Route path="/simulation" element={<SimulationScreen />} />
           <Route path="/history"    element={<HistoryScreen />} />
-          <Route
-            path="/settings"
-            element={<PlaceholderScreen title="Configuració" />}
-          />
+          <Route path="/settings" element={<SettingsScreen />} />
         </Routes>
       </div>
       <NavBar />

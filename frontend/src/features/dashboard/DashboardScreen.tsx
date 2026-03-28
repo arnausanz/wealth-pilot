@@ -3,6 +3,7 @@ import { useNetWorthHistory } from '../../hooks/useNetWorth';
 import { useMarketPrices } from '../../hooks/useMarketPrices';
 import { useTheme } from '../../hooks/useTheme';
 import { SunIcon, MoonIcon } from '../../components/icons/Icons';
+import { useConfigObjectives } from '../../hooks/useConfig';
 import { n } from '../../types';
 import { Card } from '../../components/ui/Card';
 import { HeroValue } from './HeroValue';
@@ -64,16 +65,21 @@ function SkeletonCard({ height = 100 }: { height?: number }) {
   );
 }
 
-const GOAL_AMOUNT = 40000;
-const GOAL_YEAR = 2029;
-const GOAL_LABEL = 'Habitatge';
-
 export function DashboardScreen() {
   const [period, setPeriod] = useState('1A');
   const { isDark, toggle } = useTheme();
 
   const { data: networthData, isLoading: nwLoading } = useNetWorthHistory(period);
   const { data: pricesData, isLoading: pricesLoading } = useMarketPrices();
+  const { data: objectives = [] } = useConfigObjectives();
+
+  // Objectiu d'habitatge des de l'API
+  const homePurchaseObj = objectives.find((o) => o.key === 'home_purchase' && o.is_active);
+  const GOAL_AMOUNT = homePurchaseObj ? n(homePurchaseObj.target_amount) : 80000;
+  const GOAL_YEAR = homePurchaseObj?.target_date
+    ? new Date(homePurchaseObj.target_date).getFullYear()
+    : 2029;
+  const GOAL_LABEL = homePurchaseObj?.name ?? 'Habitatge';
 
   const snapshots = networthData?.snapshots ?? [];
   const prices = pricesData?.prices ?? [];

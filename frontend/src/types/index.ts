@@ -202,3 +202,115 @@ export interface InvestmentSummaryResponse {
   total_pnl_eur: string | number | null;
   total_pnl_pct: string | number | null;
 }
+
+// ─── Config ───────────────────────────────────────────────────────────────────
+
+export interface AssetConfigOut {
+  id: number;
+  name: string;
+  display_name: string;
+  ticker_yf: string | null;
+  ticker_mw: string | null;
+  isin: string | null;
+  asset_type: string;
+  currency: string;
+  color_hex: string | null;
+  target_weight: string | number | null;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface AssetConfigPatch {
+  display_name?: string;
+  ticker_yf?: string;
+  ticker_mw?: string;
+  isin?: string;
+  color_hex?: string;
+  target_weight?: number | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
+export interface AssetConfigCreate {
+  name: string;
+  display_name: string;
+  ticker_yf?: string;
+  ticker_mw?: string;
+  isin?: string;
+  asset_type?: string;
+  currency?: string;
+  color_hex?: string;
+  target_weight?: number;
+  sort_order?: number;
+}
+
+export interface ContributionOut {
+  id: number;
+  asset_id: number;
+  asset_display_name: string;
+  asset_ticker_yf: string | null;
+  asset_color_hex: string | null;
+  amount: string | number;
+  day_of_month: number;
+  is_active: boolean;
+  notes: string | null;
+}
+
+export interface ContributionPatch {
+  amount?: number;
+  day_of_month?: number;
+  is_active?: boolean;
+  notes?: string;
+}
+
+export interface ContributionCreate {
+  asset_id: number;
+  amount: number;
+  day_of_month?: number;
+  notes?: string;
+}
+
+export interface ScenarioRow {
+  asset_id: number;
+  display_name: string;
+  ticker_yf: string | null;
+  adverse: string | number | null;
+  base: string | number | null;
+  optimistic: string | number | null;
+}
+
+export interface ObjectiveOut {
+  id: number;
+  key: string;
+  name: string;
+  description: string | null;
+  objective_type: string;
+  target_amount: string | number;
+  target_date: string | null;
+  current_amount: string | number;
+  is_active: boolean;
+}
+
+export interface ObjectivePatch {
+  name?: string;
+  description?: string;
+  target_amount?: number;
+  target_date?: string;
+  current_amount?: number;
+  is_active?: boolean;
+}
+
+export interface ParameterOut {
+  key: string;
+  value: string;
+  value_type: string;
+  description: string | null;
+  category: string | null;
+  is_editable: boolean;
+}
+
+export interface WeightCheckResponse {
+  total_weight: string | number;
+  is_valid: boolean;
+  message: string;
+}
