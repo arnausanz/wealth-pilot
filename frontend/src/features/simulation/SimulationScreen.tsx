@@ -1,0 +1,523 @@
+import { useState } from 'react';
+import { Card } from '../../components/ui/Card';
+import { ProjectionChart } from '../../components/charts/ProjectionChart';
+import { useProjection, useScenariosInfo } from '../../hooks/useSimulation';
+import { n } from '../../types';
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const SCENARIO_COLORS: Record<string, string> = {
+  adverse:    '#EF4444',
+  base:       '#3B82F6',
+  optimistic: '#10B981',
+};
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function HorizonSlider({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div style={{ padding: '0 24px 4px' }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 10,
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontFamily: 'var(--font-num)',
+            letterSpacing: '0.06em',
+            color: 'var(--color-text-tertiary)',
+            textTransform: 'uppercase',
+          }}
+        >
+          Horitzó
+        </span>
+        <span
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            fontFamily: 'var(--font-num)',
+            color: 'var(--color-text)',
+            letterSpacing: '-0.02em',
+          }}
+        >
+          {value} {value === 1 ? 'any' : 'anys'}
+        </span>
+      </div>
+      <input
+        type="range"
+        min={1}
+        max={30}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{
+          width: '100%',
+          height: 4,
+          borderRadius: 2,
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          background: `linear-gradient(to right, var(--color-accent) ${((value - 1) / 29) * 100}%, rgba(255,255,255,0.15) 0%)`,
+          cursor: 'pointer',
+          outline: 'none',
+        }}
+      />
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginTop: 6,
+        }}
+      >
+        {[1, 5, 10, 15, 20, 25, 30].map((yr) => (
+          <span
+            key={yr}
+            onClick={() => onChange(yr)}
+            style={{
+              fontSize: 9,
+              fontFamily: 'var(--font-num)',
+              color: value === yr ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'color 0.15s',
+            }}
+          >
+            {yr}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ScenarioResultCard({
+  type,
+  label,
+  returnPct,
+  endValue,
+  cagr,
+  isMain,
+}: {
+  type: string;
+  label: string;
+  returnPct: number;
+  endValue: number;
+  cagr: number | null;
+  isMain: boolean;
+}) {
+  const color = SCENARIO_COLORS[type] || 'var(--color-accent)';
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        padding: isMain ? '14px 12px' : '12px 10px',
+        background: isMain
+          ? `linear-gradient(135deg, ${color}22 0%, rgba(255,255,255,0.03) 100%)`
+          : 'var(--color-glass-bg)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
+        border: `1px solid ${isMain ? color + '44' : 'var(--color-glass-border)'}`,
+        borderRadius: 14,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}
+    >
+      {/* Dot + label */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: '50%',
+            background: color,
+            flexShrink: 0,
+          }}
+        />
+        <span
+          style={{
+            fontSize: 10,
+            fontFamily: 'var(--font-num)',
+            letterSpacing: '0.06em',
+            color: 'var(--color-text-tertiary)',
+            textTransform: 'uppercase',
+          }}
+        >
+          {label}
+        </span>
+      </div>
+
+      {/* End value */}
+      <div
+        style={{
+          fontSize: isMain ? 18 : 14,
+          fontWeight: 700,
+          fontFamily: 'var(--font-num)',
+          letterSpacing: '-0.02em',
+          color: 'var(--color-text)',
+        }}
+      >
+        €{endValue.toLocaleString('ca-ES', { maximumFractionDigits: 0 })}
+      </div>
+
+      {/* Return pct + CAGR */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span
+          style={{
+            fontSize: 11,
+            fontFamily: 'var(--font-num)',
+            color,
+            fontWeight: 600,
+          }}
+        >
+          +{returnPct.toFixed(1)}% retorn
+        </span>
+        {cagr != null && (
+          <span
+            style={{
+              fontSize: 9,
+              fontFamily: 'var(--font-num)',
+              color: 'var(--color-text-tertiary)',
+            }}
+          >
+            CAGR {cagr.toFixed(1)}%/a
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ContributionInfo({
+  monthly,
+  horizonYears,
+}: {
+  monthly: number;
+  horizonYears: number;
+}) {
+  const totalContribs = monthly * horizonYears * 12;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '10px 14px',
+        background: 'rgba(255,255,255,0.03)',
+        borderRadius: 10,
+        border: '1px solid var(--color-glass-border)',
+        marginTop: 8,
+      }}
+    >
+      <div>
+        <div
+          style={{
+            fontSize: 9,
+            fontFamily: 'var(--font-num)',
+            letterSpacing: '0.06em',
+            color: 'var(--color-text-tertiary)',
+            textTransform: 'uppercase',
+            marginBottom: 2,
+          }}
+        >
+          Aportació mensual
+        </div>
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 600,
+            fontFamily: 'var(--font-num)',
+            color: 'var(--color-text)',
+          }}
+        >
+          €{monthly.toLocaleString('ca-ES')}
+        </div>
+      </div>
+      <div style={{ textAlign: 'right' }}>
+        <div
+          style={{
+            fontSize: 9,
+            fontFamily: 'var(--font-num)',
+            letterSpacing: '0.06em',
+            color: 'var(--color-text-tertiary)',
+            textTransform: 'uppercase',
+            marginBottom: 2,
+          }}
+        >
+          Total aportat ({horizonYears}a)
+        </div>
+        <div
+          style={{
+            fontSize: 15,
+            fontWeight: 600,
+            fontFamily: 'var(--font-num)',
+            color: 'var(--color-text-secondary)',
+          }}
+        >
+          €{totalContribs.toLocaleString('ca-ES')}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Screen ─────────────────────────────────────────────────────────────
+
+export function SimulationScreen() {
+  const [horizonYears, setHorizonYears] = useState(10);
+  const { data: scenariosInfo } = useScenariosInfo();
+  const { data: projection, isLoading } = useProjection(horizonYears);
+
+  const startValue   = n(projection?.start_value);
+  const monthly      = n(projection?.monthly_contribution ?? scenariosInfo?.monthly_contributions);
+  const goalTarget   = projection?.home_purchase_target != null ? n(projection.home_purchase_target) : null;
+  const scenarios    = projection?.scenarios;
+
+  return (
+    <div
+      style={{
+        background: 'var(--color-bg)',
+        minHeight: '100vh',
+        fontFamily: 'var(--font-body)',
+        color: 'var(--color-text)',
+        maxWidth: 430,
+        margin: '0 auto',
+        paddingBottom: 88,
+      }}
+    >
+      {/* Header */}
+      <div style={{ padding: '56px 24px 16px' }}>
+        <div
+          style={{
+            fontSize: 24,
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            fontFamily: 'var(--font-display)',
+          }}
+        >
+          Simulació
+        </div>
+        {startValue > 0 && (
+          <div
+            style={{
+              fontSize: 13,
+              color: 'var(--color-text-tertiary)',
+              fontFamily: 'var(--font-num)',
+              marginTop: 4,
+            }}
+          >
+            Cartera inicial:{' '}
+            <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+              €{startValue.toLocaleString('ca-ES', { maximumFractionDigits: 0 })}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Slider */}
+      <HorizonSlider value={horizonYears} onChange={setHorizonYears} />
+
+      {/* Chart */}
+      <div style={{ padding: '12px 0 0', overflow: 'hidden' }}>
+        {isLoading ? (
+          <div
+            style={{
+              height: 240,
+              margin: '0 24px',
+              background: 'var(--color-glass-bg)',
+              borderRadius: 16,
+              animation: 'pulse 1.5s ease infinite',
+            }}
+          />
+        ) : scenarios ? (
+          <ProjectionChart
+            adverse={scenarios.adverse.data_points}
+            base={scenarios.base.data_points}
+            optimistic={scenarios.optimistic.data_points}
+            horizonYears={horizonYears}
+            goalValue={goalTarget}
+            width={390}
+            height={240}
+          />
+        ) : null}
+      </div>
+
+      {/* Legend */}
+      {scenarios && (
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 16,
+            padding: '6px 24px 4px',
+          }}
+        >
+          {(['adverse', 'base', 'optimistic'] as const).map((type) => (
+            <div
+              key={type}
+              style={{ display: 'flex', alignItems: 'center', gap: 5 }}
+            >
+              <div
+                style={{
+                  width: type === 'base' ? 16 : 12,
+                  height: type === 'base' ? 2.5 : 1.5,
+                  borderRadius: 2,
+                  background: SCENARIO_COLORS[type],
+                  opacity: type === 'base' ? 1 : 0.7,
+                }}
+              />
+              <span
+                style={{
+                  fontSize: 9,
+                  fontFamily: 'var(--font-num)',
+                  color: 'var(--color-text-tertiary)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {scenarios[type].label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Scenario cards */}
+      {scenarios && (
+        <div style={{ padding: '12px 24px 0' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['adverse', 'base', 'optimistic'] as const).map((type) => {
+              const s = scenarios[type];
+              return (
+                <ScenarioResultCard
+                  key={type}
+                  type={type}
+                  label={s.label}
+                  returnPct={n(s.total_return_pct)}
+                  endValue={n(s.end_value)}
+                  cagr={s.cagr_pct != null ? n(s.cagr_pct) : null}
+                  isMain={type === 'base'}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Contribution info */}
+      {monthly > 0 && (
+        <div style={{ padding: '0 24px' }}>
+          <ContributionInfo monthly={monthly} horizonYears={horizonYears} />
+        </div>
+      )}
+
+      {/* Scenario returns info */}
+      {scenariosInfo && (
+        <div style={{ padding: '12px 24px 0' }}>
+          <Card>
+            <div
+              style={{
+                fontSize: 10,
+                fontFamily: 'var(--font-num)',
+                letterSpacing: '0.06em',
+                color: 'var(--color-text-tertiary)',
+                textTransform: 'uppercase',
+                marginBottom: 10,
+              }}
+            >
+              Retorns anuals ponderats
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {scenariosInfo.scenarios.map((s) => (
+                <div
+                  key={s.scenario_type}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: SCENARIO_COLORS[s.scenario_type],
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontFamily: 'var(--font-num)',
+                      fontWeight: 600,
+                      color: SCENARIO_COLORS[s.scenario_type],
+                    }}
+                  >
+                    {n(s.blended_return_pct).toFixed(2)}% / any
+                  </span>
+                </div>
+              ))}
+            </div>
+            {goalTarget != null && (
+              <div
+                style={{
+                  marginTop: 12,
+                  paddingTop: 10,
+                  borderTop: '1px solid var(--color-glass-border)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 11,
+                    color: 'var(--color-text-tertiary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ color: '#F59E0B', fontSize: 13 }}>–––</span>
+                  Objectiu habitatge
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontFamily: 'var(--font-num)',
+                    fontWeight: 600,
+                    color: '#F59E0B',
+                  }}
+                >
+                  €{goalTarget.toLocaleString('ca-ES')}
+                </span>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}

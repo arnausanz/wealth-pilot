@@ -115,3 +115,90 @@ export interface PortfolioSummaryResponse {
   on_track: boolean | null;
   on_track_detail: string | null;
 }
+
+// ─── Simulation ──────────────────────────────────────────────────────────────
+
+export interface ScenarioInfo {
+  scenario_type: 'adverse' | 'base' | 'optimistic';
+  blended_return_pct: string | number;
+  label: string;
+  description: string;
+}
+
+export interface ScenariosInfoResponse {
+  scenarios: ScenarioInfo[];
+  monthly_contributions: string | number;
+  current_investment_eur: string | number;
+}
+
+export interface ScenarioProjection {
+  scenario_type: 'adverse' | 'base' | 'optimistic';
+  label: string;
+  annual_return_pct: string | number;
+  end_value: string | number;
+  total_return_eur: string | number;
+  total_return_pct: string | number;
+  total_contributions_eur: string | number;
+  cagr_pct: string | number | null;
+  data_points: (string | number)[];
+}
+
+export interface ProjectionResponse {
+  horizon_years: number;
+  horizon_months: number;
+  start_value: string | number;
+  monthly_contribution: string | number;
+  home_purchase_target: string | number | null;
+  home_purchase_date: string | null;
+  scenarios: Record<'adverse' | 'base' | 'optimistic', ScenarioProjection>;
+}
+
+// ─── History ─────────────────────────────────────────────────────────────────
+
+export interface TransactionOut {
+  id: number;
+  tx_date: string;
+  tx_type: string;
+  amount_eur: string | number;
+  description: string | null;
+  mw_symbol: string | null;
+  display_name: string | null;
+  ticker_yf: string | null;
+  color_hex: string | null;
+  shares: string | number | null;
+  account_name: string | null;
+}
+
+export interface TransactionsResponse {
+  transactions: TransactionOut[];
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
+}
+
+export interface AssetInvestmentSummary {
+  asset_id: number;
+  display_name: string;
+  ticker_yf: string | null;
+  color_hex: string | null;
+  shares: string | number;
+  total_invested_eur: string | number;
+  avg_cost_eur: string | number | null;
+  current_price_eur: string | number | null;
+  current_value_eur: string | number | null;
+  pnl_eur: string | number | null;
+  pnl_pct: string | number | null;
+  buy_count: number;
+  sell_count: number;
+  first_buy_date: string | null;
+  last_buy_date: string | null;
+}
+
+export interface InvestmentSummaryResponse {
+  assets: AssetInvestmentSummary[];
+  total_invested_eur: string | number;
+  total_current_value_eur: string | number | null;
+  total_pnl_eur: string | number | null;
+  total_pnl_pct: string | number | null;
+}

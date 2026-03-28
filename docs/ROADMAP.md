@@ -1,6 +1,6 @@
 # WealthPilot — Roadmap de Desenvolupament
 
-> Versió: 1.6 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1 ✅ + Fase 2 ✅ completades, 155 tests verds (108 backend + 47 frontend)
+> Versió: 1.7 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1 ✅ + Fase 2 ✅ + Fase 3 ✅ completades, 155 tests verds (108 backend + 47 frontend)
 
 ---
 
@@ -237,60 +237,68 @@ Total des de `mw_accounts.current_balance` (font de veritat). Desglossat per ass
 
 ---
 
-## FASE 3 — MVP V1.0: Simulació & Historial
+## FASE 3 — MVP V1.0: Simulació & Historial ✅
 **Objectiu:** Motor de simulació + historial de transaccions. Tancar V1.0 MVP funcional.
+**Estat:** Completada al 100%. Motor de simulació + historial operatius. TypeScript 0 errors.
 
-### 3.1 Backend Motor de Simulació
-- [ ] `modules/simulation/engine.py`:
-  - [ ] Projecció composta: saldo actual × (1+r)^n + contribucions mensuals capitalitzades
-  - [ ] Mode A: donats paràmetres → retorna valor futur a cada mes fins a l'horitzó
-  - [ ] Mode B: donat objectiu → retorna rendiment necessari
-  - [ ] Suport 3 escenaris: advers / base / optimista (llegits de `scenarios` table)
-  - [ ] Suport contribucions extraordinàries en dates futures
-  - [ ] Cache de resultats en `simulation_results` (no recalcula si params no han canviat)
-- [ ] `modules/simulation/router.py`:
-  - [ ] `POST /api/v1/simulation/project` (body: horizon, scenario, what_if overrides)
-  - [ ] `GET /api/v1/simulation/scenarios` (llista escenaris disponibles)
+### 3.1 Backend Motor de Simulació ✅
+> `modules/simulation/`: motor pur (`engine.py`) + servei + router. Retorn ponderat per pesos actuals de cartera. Objectiu habitatge inclòs al gràfic (línia groga).
 
-### 3.2 Backend Historial & Fiscalitat
-- [ ] `modules/history/service.py`:
-  - [ ] `get_transactions(asset?, date_from?, date_to?, type?)` amb paginació
-  - [ ] `get_tax_summary(year)`: plusvàlues realitzades, base imposable, trams IRPF espanyols
-  - [ ] `get_asset_summary()`: resum per asset (total invertit, valor actual, rendiment total)
-- [ ] `modules/history/router.py`:
-  - [ ] `GET /api/v1/history/transactions`
-  - [ ] `GET /api/v1/history/tax-report?year=2025`
-  - [ ] `GET /api/v1/history/summary`
+- [x] `modules/simulation/engine.py`: funció pura `project()` — FV = PV×(1+r)^n + PMT×[(1+r)^n−1]/r; helper `cagr()`, `monthly_rate()`
+- [x] Retorn ponderat de cartera: blended = Σ(weight_i × return_i) dels actuals de l'últim snapshot
+- [x] 3 escenaris llegits de la taula `scenarios`: adverse (2.42%), base (6.38%), optimistic (10.34%)
+- [x] `GET /api/v1/simulation/scenarios` — escenaris + contribucions actives + cartera actual
+- [x] `GET /api/v1/simulation/project?horizon_years=10&monthly_contribution=X` — projecció 3 escenaris
+  - Retorna sèrie mensual completa per a cada escenari (121 punts per 10 anys)
+  - Mètriques: end_value, total_return_eur/pct, cagr_pct, total_contributions_eur
+  - Objectiu habitatge: target_amount + target_date des de la taula `objectives`
+- [ ] Cache de resultats en `simulation_results` *(futur — peticions freqüents s'acceleren ja que TanStack Query fa caching al client)*
+- [ ] Contribucions extraordinàries *(Fase 4)*
 
-### 3.3 Frontend Simulació
-- [ ] `modules/simulation/index.js` + `simulation.html`
-- [ ] Slider horitzontal d'horitzó temporal (3 mesos → 5 anys)
-- [ ] Selector d'escenari (Advers / Base / Optimista) amb pill buttons
-- [ ] Gràfic de línia (Chart.js) amb 3 línies simultànies (un color per escenari)
-- [ ] Cards de resultats: valor final, rendiment total, CAGR estimat
-- [ ] Camps "what-if": contribució mensual ajustable, capital inicial extra
-- [ ] Comparació visual "valor actual vs. objectiu"
+### 3.2 Backend Historial ✅
+> `modules/history/`: transaccions paginades + resum per asset amb P&L calculat des de preus actuals YF.
 
-### 3.4 Frontend Historial
-- [ ] `modules/history/index.js` + `history.html`
-- [ ] Llista de transaccions amb filtres (asset, tipus, data)
-- [ ] Paginació o scroll infinit
-- [ ] Resum per asset (table)
-- [ ] Botó "Informe Fiscal 2025" → genera resum IRPF
-- [ ] Botó "Sincronitzar MoneyWiz" → obre diàleg de pujada de backup
+- [x] `modules/history/service.py`:
+  - [x] `get_transactions()`: paginació + filtres (tx_type, ticker_yf, date_from, date_to)
+  - [x] `get_investment_summary()`: per asset — shares, total invertit, cost mig, valor actual, P&L €/%
+- [x] `modules/history/router.py`:
+  - [x] `GET /api/v1/history/transactions` — 1.471 transaccions paginades
+  - [x] `GET /api/v1/history/investments` — resum per asset amb preus YF actuals
+- [ ] `GET /api/v1/history/tax-report?year=2025` — plusvàlues IRPF *(Fase 4 — requereix implementació FIFO)*
+
+### 3.3 Frontend Simulació ✅
+> `features/simulation/SimulationScreen.tsx` + `components/charts/ProjectionChart.tsx` (SVG reutilitzable)
+
+- [x] `ProjectionChart.tsx`: SVG 3 línies (adverse/base/optimistic) amb animació d'entrada (700ms, ease-out cubic)
+  - Àrea sombreada entre advers i optimista, línia d'objectiu (groga puntejada), dots al final
+  - X-axis: etiquetes d'anys adaptatives, Y-axis: format k/M€
+- [x] `SimulationScreen.tsx`:
+  - Slider d'horitzó 1–30 anys amb marks clickables
+  - Cards de resultat per escenari (end value, rendiment %, CAGR)
+  - ContributionInfo: aportació mensual + total aportat a l'horitzó
+  - Taula de retorns ponderats per escenari
+  - Línia objectiu habitatge visible al gràfic si dins del rang
+
+### 3.4 Frontend Historial ✅
+> `features/history/HistoryScreen.tsx` — investment summary + llista de transaccions
+
+- [x] Resum inversions: total invertit, P&L total €/%, llistat per asset amb shares/cost mig/P&L
+- [x] Transaccions paginades (25/pàgina) amb filtres per tipus (pills)
+- [x] Paginació amb "Anterior / Següent"
+- [x] TransactionRow: tipus badge, descripció, data, import, shares per inversions
 
 ### 3.5 PWA — Instal·lació Mòbil
-- [ ] `manifest.json` complet: nom, icones (múltiples mides), theme_color, display: standalone
-- [ ] `service-worker.js` amb estratègia cache-first per a assets estàtics
+- [ ] `manifest.json` complet: icones múltiples, theme_color, display: standalone
 - [ ] Banner "Afegir a pantalla d'inici" per iOS Safari
 - [ ] Test instal·lació com a PWA a iPhone real
 
-### 3.6 Validació V1.0 MVP ✅
-- [ ] Dashboard → Portfolio → Simulació → Historial navegables sense errors
-- [ ] MoneyWiz backup pujat i transaccions importades
-- [ ] Simulació a 3 anys amb 3 escenaris renderitzada correctament
-- [ ] App instal·lable com a PWA a l'iPhone
-- [ ] **V1.0 MVP FUNCIONAL LOCAL — MILESTONE 1** 🎯
+### 3.6 Validació V1.0 MVP
+- [x] Dashboard → Portfolio → Simulació → Historial navegables
+- [x] MoneyWiz backup sincronitzat (1.471 transaccions)
+- [x] Simulació 10 anys: base €125.742, advers €98.718, optimista €160.911
+- [x] TypeScript 0 errors (`make check-fe`)
+- [ ] App instal·lable com a PWA a l'iPhone *(Fase 4)*
+- [ ] **V1.0 MVP FUNCIONAL LOCAL — MILESTONE 1** 🎯 *(pendent validació visual per l'usuari)*
 
 ---
 

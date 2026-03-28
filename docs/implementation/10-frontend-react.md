@@ -47,9 +47,10 @@ frontend/
     │   │   ├── StatusDot.tsx ← Indicador de connexió (live/stale/error)
     │   │   └── TimeSelector.tsx ← Pills de periode (1S/1M/3M/6M/1A/MAX)
     │   └── charts/
-    │       ├── PortfolioChart.tsx ← SVG line chart amb animació morphing
-    │       ├── DonutChart.tsx     ← SVG donut (distribució d'actius)
-    │       └── GoalRing.tsx       ← SVG ring (progrés objectiu)
+    │       ├── PortfolioChart.tsx  ← SVG line chart amb animació morphing
+    │       ├── DonutChart.tsx      ← SVG donut (distribució d'actius)
+    │       ├── GoalRing.tsx        ← SVG ring (progrés objectiu)
+    │       └── ProjectionChart.tsx ← SVG 3-line chart (advers/base/optimista + goal line)
     ├── features/
     │   ├── dashboard/
     │   │   ├── DashboardScreen.tsx ← Pantalla principal
@@ -59,8 +60,12 @@ frontend/
     │   │   ├── Allocation.tsx      ← Donut + llista d'actius
     │   │   ├── TopMovers.tsx       ← Top movers del dia
     │   │   └── Alerts.tsx          ← Alertes actives
-    │   └── portfolio/
-    │       └── PortfolioScreen.tsx ← Vista detallada de cartera
+    │   ├── portfolio/
+    │   │   └── PortfolioScreen.tsx ← Vista detallada de cartera + P&L per asset
+    │   ├── simulation/
+    │   │   └── SimulationScreen.tsx ← Motor de projecció, slider, gràfic 3 línies
+    │   └── history/
+    │       └── HistoryScreen.tsx   ← Resum inversions + transaccions paginades
     └── test/
         └── setup.ts          ← Configuració global de tests (jest-dom, matchMedia mock)
 ```
@@ -117,26 +122,47 @@ En Docker local, Vite proxeja `/api` → `http://backend:8000` (configurat a `vi
 
 ## Dades — TanStack Query
 
-### useNetWorth
+### useNetWorthHistory
 
 ```typescript
-const { data, isLoading, isError } = useNetWorth();
-// data: NetWorthSnapshot | undefined
+const { data, isLoading, isError } = useNetWorthHistory(period);
+// data: NetWorthHistoryResponse | undefined
 ```
 
-- Endpoint: `GET /api/v1/portfolio/networth`
+- Endpoint: `GET /api/v1/networth/history?period=1y`
+- Inclou `asset_snapshots` amb pnl_eur, pnl_pct, color_hex per cada asset
 - Refresca cada 5 minuts (staleTime: 5 min)
-- Retry automàtic en error
 
 ### useMarketPrices
 
 ```typescript
 const { data } = useMarketPrices();
-// data: AssetPrice[] | undefined
+// data: MarketPricesResponse | undefined
 ```
 
 - Endpoint: `GET /api/v1/market/prices`
 - Refresca cada 5 minuts
+
+### useProjection
+
+```typescript
+const { data } = useProjection(horizonYears, monthlyContributionOverride?);
+// data: ProjectionResponse | undefined
+```
+
+- Endpoint: `GET /api/v1/simulation/project?horizon_years=10`
+- Retorna 121 punts mensuals per a cada un dels 3 escenaris
+- Inclou l'objectiu d'habitatge per a la línia de referència del gràfic
+
+### useTransactions / useInvestmentSummary
+
+```typescript
+const { data } = useTransactions({ page, per_page, tx_type, ticker_yf });
+const { data } = useInvestmentSummary();
+```
+
+- `GET /api/v1/history/transactions` — paginat, filtrable per tipus i asset
+- `GET /api/v1/history/investments` — resum P&L per asset
 
 ### Tipus importants
 

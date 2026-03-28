@@ -2,6 +2,8 @@ import { Routes, Route } from 'react-router-dom';
 import { NavBar } from './components/ui/NavBar';
 import { DashboardScreen } from './features/dashboard/DashboardScreen';
 import { PortfolioScreen } from './features/portfolio/PortfolioScreen';
+import { SimulationScreen } from './features/simulation/SimulationScreen';
+import { HistoryScreen } from './features/history/HistoryScreen';
 
 function PlaceholderScreen({ title }: { title: string }) {
   return (
@@ -58,14 +60,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<DashboardScreen />} />
           <Route path="/portfolio" element={<PortfolioScreen />} />
-          <Route
-            path="/simulation"
-            element={<PlaceholderScreen title="Simulació" />}
-          />
-          <Route
-            path="/history"
-            element={<PlaceholderScreen title="Historial" />}
-          />
+          <Route path="/simulation" element={<SimulationScreen />} />
+          <Route path="/history"    element={<HistoryScreen />} />
           <Route
             path="/settings"
             element={<PlaceholderScreen title="Configuració" />}
