@@ -1,8 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { ProjectionChart } from '../../components/charts/ProjectionChart';
 import { useProjection, useScenariosInfo } from '../../hooks/useSimulation';
 import { n } from '../../types';
+
+// Retarda les peticions a l'API mentre l'slider es mou
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -14,6 +24,8 @@ const SCENARIO_COLORS: Record<string, string> = {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
+const HORIZON_MARKS = [1, 5, 10, 15, 20, 25, 30] as const;
+
 function HorizonSlider({
   value,
   onChange,
@@ -21,57 +33,27 @@ function HorizonSlider({
   value: number;
   onChange: (v: number) => void;
 }) {
+  const trackPct = ((value - 1) / 29) * 100;
+
   return (
     <div style={{ padding: '0 24px 4px' }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 10,
-        }}
-      >
-        <span
+      {/* Track + thumb */}
+      <div style={{ position: 'relative', paddingTop: 4, paddingBottom: 4 }}>
+        <input
+          type="range"
+          min={1}
+          max={30}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
           style={{
-            fontSize: 11,
-            fontFamily: 'var(--font-num)',
-            letterSpacing: '0.06em',
-            color: 'var(--color-text-tertiary)',
-            textTransform: 'uppercase',
+            width: '100%',
+            background: `linear-gradient(to right, var(--color-accent) ${trackPct}%, var(--color-glass-border) ${trackPct}%)`,
           }}
-        >
-          Horitzó
-        </span>
-        <span
-          style={{
-            fontSize: 20,
-            fontWeight: 700,
-            fontFamily: 'var(--font-num)',
-            color: 'var(--color-text)',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          {value} {value === 1 ? 'any' : 'anys'}
-        </span>
+        />
       </div>
-      <input
-        type="range"
-        min={1}
-        max={30}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        style={{
-          width: '100%',
-          height: 4,
-          borderRadius: 2,
-          appearance: 'none',
-          WebkitAppearance: 'none',
-          background: `linear-gradient(to right, var(--color-accent) ${((value - 1) / 29) * 100}%, rgba(255,255,255,0.15) 0%)`,
-          cursor: 'pointer',
-          outline: 'none',
-        }}
-      />
+
+      {/* Marks */}
       <div
         style={{
           display: 'flex',
@@ -79,22 +61,30 @@ function HorizonSlider({
           marginTop: 6,
         }}
       >
-        {[1, 5, 10, 15, 20, 25, 30].map((yr) => (
-          <span
-            key={yr}
-            onClick={() => onChange(yr)}
-            style={{
-              fontSize: 9,
-              fontFamily: 'var(--font-num)',
-              color: value === yr ? 'var(--color-accent)' : 'rgba(255,255,255,0.2)',
-              cursor: 'pointer',
-              userSelect: 'none',
-              transition: 'color 0.15s',
-            }}
-          >
-            {yr}
-          </span>
-        ))}
+        {HORIZON_MARKS.map((yr) => {
+          const isActive = value === yr;
+          return (
+            <button
+              key={yr}
+              onClick={() => onChange(yr)}
+              style={{
+                fontSize: 9,
+                fontFamily: 'var(--font-num)',
+                color: isActive ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                background: 'none',
+                border: 'none',
+                padding: '2px 0',
+                cursor: 'pointer',
+                fontWeight: isActive ? 700 : 400,
+                transition: 'color 0.15s',
+                minWidth: 24,
+                textAlign: 'center',
+              }}
+            >
+              {yr}a
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -276,8 +266,11 @@ function ContributionInfo({
 
 export function SimulationScreen() {
   const [horizonYears, setHorizonYears] = useState(10);
+  // Debounce per evitar peticions a l'API en cada tick del slider
+  const debouncedHorizon = useDebounce(horizonYears, 350);
+
   const { data: scenariosInfo } = useScenariosInfo();
-  const { data: projection, isLoading } = useProjection(horizonYears);
+  const { data: projection, isLoading } = useProjection(debouncedHorizon);
 
   const startValue   = n(projection?.start_value);
   const monthly      = n(projection?.monthly_contribution ?? scenariosInfo?.monthly_contributions);
@@ -297,32 +290,67 @@ export function SimulationScreen() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '56px 24px 16px' }}>
+      <div style={{ padding: '56px 24px 12px' }}>
         <div
           style={{
-            fontSize: 24,
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-            fontFamily: 'var(--font-display)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
           }}
         >
-          Simulació
-        </div>
-        {startValue > 0 && (
-          <div
-            style={{
-              fontSize: 13,
-              color: 'var(--color-text-tertiary)',
-              fontFamily: 'var(--font-num)',
-              marginTop: 4,
-            }}
-          >
-            Cartera inicial:{' '}
-            <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>
-              €{startValue.toLocaleString('ca-ES', { maximumFractionDigits: 0 })}
-            </span>
+          <div>
+            <div
+              style={{
+                fontSize: 24,
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                fontFamily: 'var(--font-display)',
+              }}
+            >
+              Simulació
+            </div>
+            {startValue > 0 && (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: 'var(--color-text-tertiary)',
+                  fontFamily: 'var(--font-num)',
+                  marginTop: 2,
+                }}
+              >
+                Des de{' '}
+                <span style={{ color: 'var(--color-text-secondary)' }}>
+                  €{startValue.toLocaleString('ca-ES', { maximumFractionDigits: 0 })}
+                </span>
+              </div>
+            )}
           </div>
-        )}
+          {/* Horitzó prominent */}
+          <div style={{ textAlign: 'right' }}>
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 700,
+                fontFamily: 'var(--font-num)',
+                letterSpacing: '-0.03em',
+                color: 'var(--color-text)',
+                lineHeight: 1,
+              }}
+            >
+              {horizonYears}
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: 'var(--color-text-tertiary)',
+                  marginLeft: 3,
+                }}
+              >
+                {horizonYears === 1 ? 'any' : 'anys'}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Slider */}

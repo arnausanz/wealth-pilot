@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from '../core/api';
 import type { ProjectionResponse, ScenariosInfoResponse } from '../types';
 
@@ -20,5 +20,7 @@ export function useProjection(horizonYears: number, monthlyContribution?: number
     queryKey: ['simulation', 'project', horizonYears, monthlyContribution],
     queryFn: () => api.get<ProjectionResponse>(`/api/v1/simulation/project?${params}`),
     staleTime: 5 * 60 * 1000,
+    // Mostra les dades anteriors mentre es carreguen les noves (evita buit visual)
+    placeholderData: keepPreviousData,
   });
 }

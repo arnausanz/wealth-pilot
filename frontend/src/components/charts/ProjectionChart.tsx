@@ -12,7 +12,7 @@
  *   width / height: dimensions del SVG
  */
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { n } from '../../types';
 
 interface ProjectionChartProps {
@@ -89,10 +89,12 @@ export function ProjectionChart({
 }: ProjectionChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [animPct, setAnimPct] = useState(0);
+  // Controla si ja s'ha executat l'animació inicial
+  const hasAnimatedRef = useRef(false);
+  const rafRef = useRef<number>(0);
 
-  // Animate on mount / data change
-  useEffect(() => {
-    setAnimPct(0);
+  const runAnimation = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
     let start: number | null = null;
     const duration = 700;
 
@@ -100,14 +102,30 @@ export function ProjectionChart({
       if (!start) start = ts;
       const elapsed = ts - start;
       const pct = Math.min(elapsed / duration, 1);
-      // Ease out cubic
       const eased = 1 - Math.pow(1 - pct, 3);
       setAnimPct(eased);
-      if (pct < 1) requestAnimationFrame(frame);
+      if (pct < 1) rafRef.current = requestAnimationFrame(frame);
     }
-    const raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, [adverse, base, optimistic, horizonYears]);
+    rafRef.current = requestAnimationFrame(frame);
+  }, []);
+
+  // Anima únicament quan arriben dades per primera vegada
+  // En canvis d'horitzó (slider) simplement actualitza les dades sense re-animar
+  useEffect(() => {
+    const hasData = adverse.length > 1 && base.length > 1;
+    if (!hasData) return;
+
+    if (!hasAnimatedRef.current) {
+      hasAnimatedRef.current = true;
+      setAnimPct(0);
+      runAnimation();
+    } else {
+      // Dades actualitzades (nou horitzó): mostra directament sense reiniciar
+      setAnimPct(1);
+    }
+
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [adverse, base, optimistic, runAnimation]);
 
   if (!adverse.length || !base.length || !optimistic.length) return null;
 
