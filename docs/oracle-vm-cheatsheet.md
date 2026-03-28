@@ -11,6 +11,9 @@
 > - **SECRET_KEY app:** `316981b84ae15a43f69dad1bc0798a5aeabe3f7c8f4c4de88f4afc782c408136`
 > - **URL app:** `https://79-76-110-205.sslip.io`
 > - **Fitxer .env.prod a la VM:** `/opt/wealthpilot/.env.prod`
+> - **Basic Auth usuari:** `arnau`
+> - **Basic Auth contrasenya:** `qosteH-2caccy-poxkot`
+> - **Fitxer htpasswd:** `/etc/nginx/.htpasswd`
 
 > ⚠️ Cada secció indica on s'executa: **[MAC]** o **[VM]**
 

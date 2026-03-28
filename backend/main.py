@@ -1,14 +1,18 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from core.config import settings
 from core.db import AsyncSessionLocal
 from core.errors import register_error_handlers
 from core.logging import setup_logging
 from modules.analytics.router import router as analytics_router
+from modules.auth.router import COOKIE_NAME, VALID_TOKEN
+from modules.auth.router import router as auth_router
 from modules.config.router import router as config_router
 from modules.history.router import router as history_router
 from modules.market import service as market_service
@@ -21,6 +25,33 @@ from modules.sync.router import router as sync_router
 logger = logging.getLogger(__name__)
 
 setup_logging()
+
+
+# ─── Middleware d'autenticació ─────────────────────────────────────────────────
+
+# Rutes que NO requereixen autenticació
+_PUBLIC_PATHS = {"/health", "/api/v1", "/api/v1/auth/login", "/api/v1/auth/status"}
+_PUBLIC_PREFIXES = ("/api/docs", "/api/redoc", "/api/openapi.json")
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """Protegeix totes les rutes /api/v1/ excepte les públiques.
+    Retorna 401 JSON si la cookie de sessió és absent o invàlida."""
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+
+        # Deixa passar rutes públiques i no-API
+        if (path in _PUBLIC_PATHS
+                or any(path.startswith(p) for p in _PUBLIC_PREFIXES)
+                or not path.startswith("/api/")):
+            return await call_next(request)
+
+        # Valida cookie
+        if request.cookies.get(COOKIE_NAME) != VALID_TOKEN:
+            return JSONResponse(status_code=401, content={"detail": "No autenticat"})
+
+        return await call_next(request)
 
 
 @asynccontextmanager
@@ -49,6 +80,7 @@ app = FastAPI(
     openapi_url="/api/openapi.json",
 )
 
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[o.strip() for o in settings.CORS_ORIGINS.split(",")],
@@ -62,6 +94,7 @@ register_error_handlers(app)
 # ─── Routers ──────────────────────────────────────────────────────────────────
 # Afegir nous mòduls aquí. El reste del codi no es toca mai.
 
+app.include_router(auth_router)
 app.include_router(analytics_router)
 app.include_router(market_router, prefix="/api/v1")
 app.include_router(networth_router)
