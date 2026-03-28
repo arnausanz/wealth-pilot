@@ -134,18 +134,22 @@ def _yf_download_batch(
 
 
 def _extract_ohlcv_single(raw: pd.DataFrame) -> pd.DataFrame | None:
-    """Extract OHLCV from a single-ticker yfinance DataFrame."""
-    try:
-        needed = {"Open", "High", "Low", "Close", "Volume"}
-        available = {c if isinstance(c, str) else c[0] for c in raw.columns}
-        if not needed.issubset(available):
-            # yfinance >= 0.2.x may return MultiIndex even for single tickers
-            if isinstance(raw.columns, pd.MultiIndex):
-                # Take the first ticker level
-                ticker_name = raw.columns.get_level_values(1)[0]
-                return _extract_ohlcv_multi(raw, ticker_name)
-            return None
+    """Extract OHLCV from a single-ticker yfinance DataFrame.
 
+    yfinance >= 1.0 always returns MultiIndex columns (Price, Ticker) even for
+    single-ticker downloads. This function handles both the legacy flat format
+    and the new MultiIndex format.
+    """
+    try:
+        # yfinance 1.x: always MultiIndex (Price, Ticker)
+        if isinstance(raw.columns, pd.MultiIndex):
+            ticker_name = raw.columns.get_level_values(1)[0]
+            return _extract_ohlcv_multi(raw, ticker_name)
+
+        # Legacy flat columns: ["Open", "High", "Low", "Close", "Volume"]
+        needed = {"Open", "High", "Low", "Close", "Volume"}
+        if not needed.issubset(set(raw.columns)):
+            return None
         df = raw[list(needed)].copy()
         df = df.dropna(subset=["Close"])
         df.index = pd.to_datetime(df.index).date
