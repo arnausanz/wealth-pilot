@@ -47,7 +47,8 @@ def _build_moneywiz_sqlite() -> bytes:
             ZTYPE2 INTEGER, ZPARENTCATEGORY INTEGER,
             ZDATE1 REAL, ZAMOUNT1 REAL,
             ZNOTES1 TEXT, ZACCOUNT2 INTEGER,
-            ZSTATUS1 INTEGER
+            ZSTATUS1 INTEGER,
+            ZNUMBEROFSHARES REAL, ZSYMBOL1 TEXT
         );
         CREATE TABLE ZCATEGORYASSIGMENT (
             Z_PK INTEGER PRIMARY KEY,
@@ -105,14 +106,21 @@ def _build_moneywiz_sqlite() -> bytes:
     d2 = _apple_ts(date(2025, 2, 10))
     d3 = _apple_ts(date(2025, 3, 5))
     d4 = _apple_ts(date(2025, 4, 1))
-    conn.executemany(
+    conn.execute(
         "INSERT INTO ZSYNCOBJECT (Z_PK, Z_ENT, ZDATE1, ZAMOUNT1, ZCURRENCYNAME2, ZNOTES1, ZACCOUNT2, ZSTATUS1) VALUES (?,?,?,?,?,?,?,?)",
-        [
-            (200, 47, d1, -45.50, "EUR", "Mercadona",  1, 0),  # expense
-            (201, 37, d2,  2500.0, "EUR", "Nòmina",    1, 1),  # income
-            (202, 45, d3,   300.0, "EUR", None,         1, 0),  # transfer_in
-            (203, 40, d4,  -500.0, "EUR", "IWDA",       2, 0),  # investment_buy
-        ],
+        (200, 47, d1, -45.50, "EUR", "Mercadona", 1, 0),  # expense
+    )
+    conn.execute(
+        "INSERT INTO ZSYNCOBJECT (Z_PK, Z_ENT, ZDATE1, ZAMOUNT1, ZCURRENCYNAME2, ZNOTES1, ZACCOUNT2, ZSTATUS1) VALUES (?,?,?,?,?,?,?,?)",
+        (201, 37, d2, 2500.0, "EUR", "Nòmina", 1, 1),   # income
+    )
+    conn.execute(
+        "INSERT INTO ZSYNCOBJECT (Z_PK, Z_ENT, ZDATE1, ZAMOUNT1, ZCURRENCYNAME2, ZNOTES1, ZACCOUNT2, ZSTATUS1) VALUES (?,?,?,?,?,?,?,?)",
+        (202, 45, d3, 300.0, "EUR", None, 1, 0),          # transfer_in
+    )
+    conn.execute(
+        "INSERT INTO ZSYNCOBJECT (Z_PK, Z_ENT, ZDATE1, ZAMOUNT1, ZCURRENCYNAME2, ZNOTES1, ZACCOUNT2, ZSTATUS1, ZNUMBEROFSHARES, ZSYMBOL1) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (203, 40, d4, -500.0, "EUR", "EUNL buy", 2, 0, 4.5, "EUNL"),  # investment_buy
     )
 
     # Assignació de categories per a la despesa (Z_PK 200 → categoria 102)
@@ -143,7 +151,8 @@ def _build_moneywiz_sqlite() -> bytes:
             ZARCHIVED INTEGER, ZINCLUDEINNETWORTH INTEGER,
             ZTYPE2 INTEGER, ZPARENTCATEGORY INTEGER,
             ZDATE1 REAL, ZAMOUNT1 REAL,
-            ZNOTES1 TEXT, ZACCOUNT2 INTEGER, ZSTATUS1 INTEGER
+            ZNOTES1 TEXT, ZACCOUNT2 INTEGER, ZSTATUS1 INTEGER,
+            ZNUMBEROFSHARES REAL, ZSYMBOL1 TEXT
         );
         CREATE TABLE ZCATEGORYASSIGMENT (
             Z_PK INTEGER PRIMARY KEY, Z_ENT INTEGER, Z_OPT INTEGER,
@@ -182,8 +191,11 @@ def _build_moneywiz_sqlite() -> bytes:
             (200, 47, d1, -45.50, "EUR", "Mercadona", 1, 0),
             (201, 37, d2, 2500.0, "EUR", "Nòmina",    1, 1),
             (202, 45, d3,  300.0, "EUR", None,         1, 0),
-            (203, 40, d4, -500.0, "EUR", "IWDA",       2, 0),
         ],
+    )
+    conn2.execute(
+        "INSERT INTO ZSYNCOBJECT (Z_PK, Z_ENT, ZDATE1, ZAMOUNT1, ZCURRENCYNAME2, ZNOTES1, ZACCOUNT2, ZSTATUS1, ZNUMBEROFSHARES, ZSYMBOL1) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        (203, 40, d4, -500.0, "EUR", "EUNL buy", 2, 0, 4.5, "EUNL"),
     )
     conn2.execute(
         "INSERT INTO ZCATEGORYASSIGMENT (Z_PK, Z_ENT, ZASSIGMENTNUMBER, ZCATEGORY, ZTRANSACTION, ZAMOUNT) VALUES (?,?,?,?,?,?)",

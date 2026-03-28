@@ -99,7 +99,7 @@ ASSETS = [
     {
         "name": "iShares Core MSCI Japan IMI UCITS ETF",
         "display_name": "Japan",
-        "ticker_mw": "CSJP",
+        "ticker_mw": "XMK9",
         "ticker_yf": Ticker.JAPAN,
         "isin": "IE00B4L5YX21",
         "asset_type": AssetType.ETF,
@@ -116,7 +116,7 @@ ASSETS = [
     {
         "name": "VanEck Defense UCITS ETF",
         "display_name": "Europe Defence",
-        "ticker_mw": "WDEF",
+        "ticker_mw": "EUDF",
         "ticker_yf": Ticker.EUROPE_DEFENCE,
         "isin": "IE000YYE6WK9",
         "asset_type": AssetType.ETF,

@@ -44,6 +44,7 @@ from sqlalchemy import delete as sa_delete, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from modules.networth import service as networth_service
 from modules.sync.models import ImportBatch, MWAccount, MWCategory, MWTransaction
 
 logger = logging.getLogger(__name__)
@@ -176,6 +177,7 @@ def _read_transactions(conn: sqlite3.Connection) -> list[dict]:
     inversions). Per a transaccions amb split de categories, pren la categoria
     principal (MIN Z_PK a ZCATEGORYASSIGMENT).
     """
+    _INV_TYPES = {40, 41}  # investment_buy, investment_sell
     ent_ids = ",".join(str(e) for e in _TX_TYPE_MAP)
     rows = conn.execute(f"""
         SELECT
@@ -186,6 +188,8 @@ def _read_transactions(conn: sqlite3.Connection) -> list[dict]:
             s.ZNOTES1,
             s.ZACCOUNT2,
             s.ZSTATUS1,
+            s.ZNUMBEROFSHARES,
+            s.ZSYMBOL1,
             agg.ZCATEGORY AS cat_mw_pk
         FROM ZSYNCOBJECT s
         LEFT JOIN (
@@ -204,6 +208,7 @@ def _read_transactions(conn: sqlite3.Connection) -> list[dict]:
             logger.warning("Transacció Z_PK=%s sense data vàlida — ignorada", r["Z_PK"])
             continue
         amount = abs(float(r["ZAMOUNT1"])) if r["ZAMOUNT1"] is not None else 0.0
+        is_inv = r["Z_ENT"] in _INV_TYPES
         txs.append({
             "mw_internal_id": str(r["Z_PK"]),
             "tx_type": _TX_TYPE_MAP[r["Z_ENT"]],
@@ -216,6 +221,9 @@ def _read_transactions(conn: sqlite3.Connection) -> list[dict]:
             "is_reconciled": bool(r["ZSTATUS1"]) if r["ZSTATUS1"] is not None else False,
             "mw_account_id": str(r["ZACCOUNT2"]) if r["ZACCOUNT2"] else None,
             "mw_category_id": str(r["cat_mw_pk"]) if r["cat_mw_pk"] else None,
+            # Camps d'inversió — None per a transaccions no-inversió
+            "shares": abs(float(r["ZNUMBEROFSHARES"])) if (is_inv and r["ZNUMBEROFSHARES"]) else None,
+            "mw_symbol": str(r["ZSYMBOL1"]).strip() if (is_inv and r["ZSYMBOL1"]) else None,
         })
     return txs
 
@@ -369,6 +377,8 @@ async def _upsert_transactions(
             "amount_eur": t["amount_eur"],
             "notes": t["notes"],
             "is_reconciled": t["is_reconciled"],
+            "shares": t.get("shares"),
+            "mw_symbol": t.get("mw_symbol"),
             "import_batch_id": batch_id,
         }
         for t in transactions
@@ -388,6 +398,8 @@ async def _upsert_transactions(
                 "amount_eur": stmt.excluded.amount_eur,
                 "notes": stmt.excluded.notes,
                 "is_reconciled": stmt.excluded.is_reconciled,
+                "shares": stmt.excluded.shares,
+                "mw_symbol": stmt.excluded.mw_symbol,
                 # import_batch_id: mantenim el del primer import per traçabilitat
             },
         ).returning(MWTransaction.id)
@@ -536,6 +548,17 @@ async def process_upload(
             "%d transaccions upserted, %d registres eliminats (prune)",
             batch.id, acc_n, cat_n, tx_n, deleted,
         )
+
+        # Trigger automàtic: generar snapshot de net worth per avui
+        try:
+            snap = await networth_service.generate_snapshot(db, trigger_source="sync")
+            logger.info(
+                "Snapshot net worth generat post-sync: %.2f EUR",
+                snap.total_net_worth,
+            )
+        except Exception as snap_exc:
+            # No fallar el sync si el snapshot falla
+            logger.error("Snapshot net worth fallat (non-fatal): %s", snap_exc)
 
     except Exception as exc:
         await db.rollback()

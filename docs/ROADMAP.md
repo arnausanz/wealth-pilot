@@ -168,21 +168,30 @@ Gap fill robust que descarrega tot l'historial des de la data d'inceptació, rec
 - [x] Fix NullPool als tests: fixture `_use_null_pool` a conftest.py resol el problema de "Future attached to different loop" entre event loops de pytest-asyncio
 
 ### 1.2 Servei MoneyWiz Parser ✅
-- [x] `modules/sync/service.py`: lògica d'extracció del `.zip` → SQLite intern de MoneyWiz (Core Data, una sola taula ZSYNCOBJECT)
+Estratègia **mirror complet**: la BD és còpia fidel del darrer backup. Upsert de tot + prune del que ja no hi és. Shares i símbol de cada transacció d'inversió extrets de `ZNUMBEROFSHARES`/`ZSYMBOL1`. `records_skipped` ara significa registres eliminats (mirror purge).
+
+- [x] `modules/sync/service.py`: lògica d'extracció del `.zip` → SQLite intern de MoneyWiz (Core Data, taula `ZSYNCOBJECT`)
 - [x] Parser de comptes (`mw_accounts`): 7 tipus (checking, savings, cash, credit, loan, investment, forex)
 - [x] Parser de categories (`mw_categories`): jerarquia resoluble en 2 passos (pares primer, self-join per FKs)
 - [x] Parser de transaccions (`mw_transactions`): 6 tipus, imports positius, timestamps Apple epoch, category via JOIN
-- [x] Parser de transaccions d'inversió: `investment_buy` i `investment_sell` a `mw_transactions`
-- [x] Importació idempotent: `ON CONFLICT (mw_internal_id) DO NOTHING` per tx, `DO UPDATE` per comptes/categories
+- [x] Parser inversions: `investment_buy`/`investment_sell` amb `shares` (ZNUMBEROFSHARES) i `mw_symbol` (ZSYMBOL1)
+- [x] Estratègia mirror: `ON CONFLICT DO UPDATE` + `_prune_removed()` esborra el que ja no és al ZIP
 - [x] `modules/sync/router.py`: `POST /api/v1/sync/upload`, `GET /api/v1/sync/status`, `GET /api/v1/sync/batches`
 - [x] Audit trail complet: `ImportBatch` sempre es crea (status=failed si hi ha error)
+- [x] Trigger post-upload: crida `networth_service.generate_snapshot()` automàticament (non-fatal)
 - [x] 34 tests: schema BD, parser pur (sense BD), endpoints + test d'idempotència
 
-### 1.3 Snapshot de Net Worth
-- [ ] Funció `generate_snapshot()`: preu actual × unitats per asset + cash = net worth diari
-- [ ] Trigger automàtic post-upload de MoneyWiz
-- [ ] Endpoint `GET /api/v1/networth/history?period=1y`
-- [ ] Validació: snapshots creats correctament amb imports reals
+### 1.3 Snapshot de Net Worth ✅
+Total des de `mw_accounts.current_balance` (font de veritat). Desglossat per asset via `shares × preu YF`. Idempotent per data. Trigger automàtic post-sync. Scripts CLI per a ús diari.
+
+- [x] `modules/networth/service.py`: `generate_snapshot()` — cash + inv + liab des de MW, posicions (shares × preu) per asset
+- [x] `modules/networth/router.py`: `POST /api/v1/networth/snapshot`, `GET /api/v1/networth/history?period=1y`
+- [x] `modules/networth/models.py`: `NetWorthSnapshot`, `AssetSnapshot` (uq_networth_date, CASCADE delete)
+- [x] `modules/networth/schemas.py`: `GenerateSnapshotResponse`, `NetWorthHistoryResponse`, `NetWorthSnapshotOut`, `AssetSnapshotOut`
+- [x] Trigger automàtic: `process_upload()` crida `generate_snapshot(trigger_source="sync")` post-import
+- [x] `change_eur` / `change_pct` calculats vs. snapshot anterior (no necessàriament el dia anterior)
+- [x] `scripts/net_worth.py` + `make net-worth`: resum CLI amb comptes, posicions per asset, P&L, últim snapshot
+- [x] `tests/test_networth.py`: 15 tests (schema BD, endpoints POST/GET, lògica de servei amb dades sintètiques)
 
 ---
 

@@ -115,7 +115,7 @@ class MWTransaction(Base):
     account_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("mw_accounts.id"), nullable=True)
     category_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("mw_categories.id"), nullable=True)
     payee_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("mw_payees.id"), nullable=True)
-    # expense, income, transfer, refund
+    # expense, income, transfer, refund, investment_buy, investment_sell
     tx_type: Mapped[str] = mapped_column(String(20), nullable=False)
     tx_date: Mapped[date] = mapped_column(Date, nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 4), nullable=False)
@@ -126,6 +126,9 @@ class MWTransaction(Base):
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_reconciled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_excluded_from_reports: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # Investment fields — NULL per a transaccions no-inversió
+    shares: Mapped[Optional[Decimal]] = mapped_column(Numeric(16, 8), nullable=True)
+    mw_symbol: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     # FK to the batch that imported this transaction
     import_batch_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("import_batches.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
