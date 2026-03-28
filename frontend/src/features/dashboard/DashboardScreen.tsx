@@ -155,6 +155,7 @@ export function DashboardScreen() {
           goalAmount={GOAL_AMOUNT}
           goalYear={GOAL_YEAR}
           goalLabel={GOAL_LABEL}
+          lastSnapshot={lastSnapshot}
         />
       )}
 
