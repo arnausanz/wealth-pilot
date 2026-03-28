@@ -1,549 +1,106 @@
-# WealthPilot — Roadmap de Desenvolupament
+# WealthPilot — Roadmap
 
-> Versió: 1.7 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1 ✅ + Fase 2 ✅ + Fase 3 ✅ completades, 155 tests verds (108 backend + 47 frontend)
-
----
-
-## Aclariments Tècnics Importants
-
-### Desenvolupament en mòbil — necessito simulador?
-
-**No per a V1.0.** La app és una PWA (Progressive Web App), el que significa que corre al navegador.
-Per simular mòbil durant el desenvolupament:
-
-- **Opció principal (recomanada):** Chrome DevTools → `F12` → icona de mòbil ("Toggle device toolbar") → selecciona iPhone 14 Pro (390×844). Perfecte per al dia a dia, zero friccions.
-- **Test en dispositiu real (iPhone/iPad):** Connecta Mac i iPhone a la mateixa WiFi. Obre `http://[IP-del-Mac]:8080` des del Safari de l'iPhone. Sense cap configuració extra.
-- **Capacitor (V2 — futur):** Aquí sí cal Xcode + iOS Simulator. Però això és molt més endavant.
-
-**Resum:** Desenvolupa en Chrome, testa en el teu iPhone per WiFi local quan vulguis validar UX real. No cal res més fins a Capacitor.
-
-### Estratègia de desplegament (local → Oracle Cloud)
-
-```
-Local dev:     Docker Compose   (aïllament total, postgres local, hot reload, zero conflictes)
-Production:    Systemd native   (la VM ja té Nginx, Python 3.12, TimescaleDB/PostgreSQL corrent)
-```
-
-**Local:** `docker compose up` = tot el stack en un sol comandament, perfecte per desenvolupar.
-
-**Producció (Oracle Cloud):** La VM ja té infraestructura. **No cal Docker a prod.**
-- PostgreSQL: `CREATE DATABASE wealthpilot;` sobre la instància TimescaleDB existent (estalvia RAM i simplicitat)
-- Python 3.12 (el que ja hi ha instal·lat)
-- Nginx: afegir un virtual host nou al Nginx existent
-- Systemd: un nou servei `.service` per a FastAPI (igual que altres projectes a la VM)
-- Let's Encrypt/Certbot: ja configurat, afegir el domini quan estigui disponible
-
-**Migrar a producció** = `git pull` + `pip install -r requirements.txt` + `alembic upgrade head` + `systemctl restart wealthpilot`
-
-### Filosofia d'Escalabilitat — El Core que no es toca mai
-
-El principi fonamental: **afegir un nou mòdul = crear una carpeta nova**. Mai tocar codi existent.
-
-```
-backend/
-  core/           ← NI UN SOL CANVI AQUÍ en tota la vida del projecte
-    db.py           (connexió, sessions, base ORM)
-    config.py       (Pydantic settings, .env loader)
-    errors.py       (error handlers estàndard)
-    logging.py      (structured logging)
-    security.py     (auth headers, rate limiting futur)
-  modules/        ← Aquí viu tot. Cada mòdul = carpeta autocontinguda
-    portfolio/
-      router.py
-      models.py
-      schemas.py
-      service.py
-    simulation/
-      router.py
-      ...
-    analytics/      ← Nou mòdul? Crea la carpeta. Registra el router. Llestos.
-      router.py
-      ...
-  main.py         ← Registra routers. Màxim 30 línies. No creix mai.
-```
-
-```
-frontend/
-  core/           ← NI UN SOL CANVI AQUÍ
-    router.js       (SPA navigation)
-    api.js          (HTTP client centralitzat)
-    store.js        (estat global lleuger)
-    events.js       (event bus)
-  modules/        ← Cada pantalla/feature = mòdul independent
-    dashboard/
-    portfolio/
-    simulation/
-    analytics/      ← Nova pantalla? Crea la carpeta. Registra la ruta. Llestos.
-```
+> Actualitzat: Març 2026 | Stack: FastAPI + React + PostgreSQL + Docker (dev) / Systemd + Nginx (prod)
 
 ---
 
-## Fases del Roadmap
+## Completat ✅
+
+| Fase | Contingut |
+|------|-----------|
+| 0 | Infraestructura: Docker Compose, PostgreSQL, FastAPI, Vite/React, 64 taules |
+| 1 | Sync MoneyWiz, market prices (Yahoo Finance), net worth snapshots |
+| 2 | Dashboard, Portfolio, rebalanceig, asset snapshots |
+| 3 | Simulació (motor FV), historial de transaccions |
+| 4 | Config UI: assets, aportacions, escenaris, objectius, paràmetres, reset defaults |
+| 5 | Analytics (despeses, flux caixa, evolució net worth, alertes) + Simulador Obert |
+| PWA | manifest.json, service-worker, icones, meta tags iOS |
 
 ---
 
-## FASE 0 — Infraestructura & Arquitectura Base ✅
-**Objectiu:** Entorn de desenvolupament 100% funcional i preparat per créixer sense límits. Tot dockeritzat des del minut 0.
-**Estat:** Completada al 100%. 64 taules a la BD, seed aplicat, 36 tests verds (`make test`).
+## FASE 6 — Deploy Oracle Cloud 🔄 En curs
 
-### 0.1 Estructura de directoris del projecte ✅
-> Creada tota l'estructura `backend/core/`, `backend/modules/`, `frontend/core/`, `frontend/modules/`, `deployment/` i `docs/`. El principi és immutable: `core/` no es toca mai; cada nova feature viu en una carpeta nova dins `modules/`.
+**VM:** Ubuntu 22.04 ARM (4 CPUs, 24GB RAM) · IP: 79.76.110.205 · Domini: `79-76-110-205.sslip.io`
 
-- [x] Crear l'estructura de carpetes completa (`backend/`, `frontend/`, `deployment/`, `docs/`)
-- [x] Crear `backend/core/` amb els fitxers base (db.py, config.py, errors.py, logging.py)
-- [x] Crear `backend/modules/` buit (cada mòdul s'afegirà aquí)
-- [x] Crear `frontend/core/` i `frontend/modules/`
-- [x] Crear `.gitignore` complet (Python, Node, Docker, .env, __pycache__, etc.)
-- [x] Crear `.env` local + `.env.prod.example` per a Oracle Cloud *(no hi ha .env.example — el .env real és local i gitignored)*
+- [ ] Obrir ports 80/443 a Oracle Security List + iptables
+- [ ] Instal·lar: nginx, certbot, python3.12, node 20, postgresql
+- [ ] Crear BD + usuari PostgreSQL (`wealthpilot_db`)
+- [ ] Clonar repo + crear `/opt/wealthpilot/venv` + `pip install`
+- [ ] Build frontend: `npm ci && npm run build` → `/opt/wealthpilot/dist`
+- [ ] Crear `/opt/wealthpilot/.env.prod` (a partir de `deployment/.env.prod.template`)
+- [ ] Copiar nginx.conf (substituir `DOMAIN_PLACEHOLDER`) + habilitar site
+- [ ] Instal·lar i arrencar `wealthpilot.service` (systemd)
+- [ ] Let's Encrypt: `certbot --nginx -d 79-76-110-205.sslip.io`
+- [ ] Migracions + seed: `alembic upgrade head` + `python scripts/seed.py`
+- [ ] Importar backup MoneyWiz (via `/api/v1/sync/upload`)
+- [ ] **✓ MILESTONE: App live a HTTPS**
 
-### 0.2 Docker Compose local ✅
-> Tres serveis orquestrats: `db` (Postgres 15 amb healthcheck), `backend` (FastAPI amb hot reload via volume mount), `frontend` (Nginx servint estàtics i fent proxy de `/api/` al backend). Volum persistent `postgres_data` i `Makefile` per a les operacions del dia a dia.
-
-- [x] `docker-compose.yml` amb 3 serveis: `db` (postgres:15), `backend` (FastAPI), `frontend` (Nginx)
-- [x] Volum persistent per a PostgreSQL (`postgres_data`)
-- [x] Hot reload per al backend en local (mount del codi + `--reload`)
-- [x] Nginx servint els estàtics del frontend + proxy `/api/` al backend
-- [x] Health checks per a tots els serveis
-- [x] `Makefile` amb comandes útils: `make dev`, `make logs`, `make db-shell`, `make migrate`
-
-### 0.3 Backend Core (FastAPI skeleton) ✅
-> `main.py` de menys de 40 línies registra CORS i routers; `core/` conté configuració (pydantic-settings llegint `.env`), motor de BD (SQLAlchemy async + pool), error handlers globals i logging estructurat a stdout. Afegir un mòdul nou = una línia a `main.py`, la resta no es toca.
-
-- [x] `main.py`: app FastAPI, CORS, middleware, registre de routers — màxim 40 línies
-- [x] `core/config.py`: Pydantic BaseSettings llegint `.env` (DATABASE_URL, ENV, LOG_LEVEL, etc.)
-- [x] `core/db.py`: Engine SQLAlchemy async, SessionLocal, Base declarativa, dependency `get_db`
-- [x] `core/errors.py`: Handlers globals per a 404, 422, 500 amb format JSON consistent
-- [x] `core/logging.py`: Logging production-ready des del dia 1
-- [x] Endpoint `GET /health` retornant versió i env → verificat `{"status":"ok"}`
-- [x] Endpoint `GET /api/v1/` retornant llista de mòduls disponibles
-
-### 0.4 Frontend Core (SPA skeleton) ✅
-> SPA en vanilla JS (zero frameworks, zero build step) amb router per hash (`#/dashboard`, etc.), client HTTP centralitzat que emet events de loading/error, event bus per comunicació entre mòduls sense acoplament, i store lleuger. El sistema de disseny en `css/variables.css` defineix tots els tokens que usaran els mòduls.
-
-- [x] `index.html` minimalista amb mounting point i imports
-- [x] `core/router.js`: Router SPA basat en hash amb lazy-load de mòduls
-- [x] `core/api.js`: Client HTTP centralitzat (fetch wrapper amb error handling i events)
-- [x] `core/store.js`: Estat global mínim reactiu via events
-- [x] `core/events.js`: Event bus per comunicació entre mòduls sense acoplament
-- [x] `manifest.json` PWA + `service-worker.js` (cache-first per estàtics, network-first per `/api/`)
-- [x] CSS: `variables.css` (design tokens dark theme), `base.css`, `components.css` (cards, badges, nav, skeletons...)
-
-### 0.5 Base de Dades & Migracions ✅
-> Schema "astronomicament gran" de 64 taules repartides en 15 mòduls (portfolio, config, sync, simulation, networth, analytics, market, history, realestate, pensions, credit, alerts, system, preferences, tags). SQLAlchemy 2.0 (`Mapped`/`mapped_column`). Primera migració Alembic aplicada. Seed idempotent amb 8 assets, 24 escenaris, 7 contribucions, 18 paràmetres, 2 objectius, 4 índexs de mercat i 8 widgets de dashboard.
-
-- [x] Alembic inicialitzat i configurat per a migracions incrementals (async)
-- [x] Schema complet en models SQLAlchemy — 64 taules en 15 mòduls (pensa en gran: millor esborrar que crear)
-- [x] Primera migració Alembic aplicada (`make migrate`)
-- [x] Seed script idempotent amb totes les dades inicials (`make seed`)
-
-### 0.6 Validació Fase 0 ✅
-> Stack completament verificat: backend responent, BD amb 64 taules i seed aplicat, 36 tests automàtics passant en verd (`make test`). Test suite cobreix: connexió BD, presència de totes les taules, índexs, constraints úniques, dades seed, i tots els endpoints de l'API.
-
-- [x] `docker compose up` arranca sense errors (`make dev`)
-- [x] `GET /health` retorna 200 → `{"status":"ok","version":"0.1.0","env":"development"}`
-- [x] Connexió a PostgreSQL verificada — 64 taules creades i verificades per tests
-- [x] Frontend servit per Nginx a `http://localhost:8080`
-- [x] Migracions executades correctament (`make migrate`)
-- [x] Seed aplicat: 8 assets, escenaris, contribucions i paràmetres a la BD (`make seed`)
-- [x] **36 tests automàtics passant** (`make test`) — BD, seed i API coberts
+**Scripts preparats:** `deployment/setup.sh` (first-time) · `deployment/deploy.sh` (actualitzar) · `deployment/nginx.conf`
 
 ---
 
-## FASE 1 — Integracions de Dades Externes
-**Objectiu:** Obtenir preus reals de Yahoo Finance i importar dades de MoneyWiz. Aquests serveis alimentaran tota la resta.
+## FASE 7 — Test mòbil PWA
 
-### 1.1 Servei Yahoo Finance ✅
-
-Gap fill robust que descarrega tot l'historial des de la data d'inceptació, recupera automàticament dels outages, i serveix preus des de la BD amb cache de 5 min. 53 tests automàtics verds.
-
-- [x] `modules/market/service.py`: servei complet amb gap fill, cache i stale detection
-- [x] `fill_all_gaps(db)`: gap fill per asset (MAX price_date → download des de allà), batches per start_date, ON CONFLICT DO NOTHING, commit per ticker, log a price_fetch_logs
-- [x] `get_current_prices(db)`: window function (ROW_NUMBER PARTITION BY asset_id), cache 5 min, stale detection (3 dies ETF, 1 dia crypto), canvi 1d en % i €
-- [x] `get_asset_price_history(db, asset_id, days)`: historial OHLCV amb LAG per a change_pct
-- [x] Gestió robusta: batch download → fallback individual amb retry exponential (3 intents)
-- [x] Lifespan a `main.py`: gap fill automàtic a l'arrencada (non-fatal si Yahoo no respon)
-- [x] `modules/market/router.py`: 4 endpoints (`/prices`, `/prices/{id}`, `/refresh`, `/history/{id}`)
-- [x] `modules/market/schemas.py`: 5 schemas Pydantic v2 (AssetPriceOut, MarketPricesResponse, GapFillResponse, PriceHistoryPoint, AssetPriceHistoryResponse)
-- [x] `backend/tests/test_market.py`: 17 tests d'integració (taules BD + endpoints API)
-- [x] Fix NullPool als tests: fixture `_use_null_pool` a conftest.py resol el problema de "Future attached to different loop" entre event loops de pytest-asyncio
-
-### 1.2 Servei MoneyWiz Parser ✅
-Estratègia **mirror complet**: la BD és còpia fidel del darrer backup. Upsert de tot + prune del que ja no hi és. Shares i símbol de cada transacció d'inversió extrets de `ZNUMBEROFSHARES`/`ZSYMBOL1`. `records_skipped` ara significa registres eliminats (mirror purge).
-
-- [x] `modules/sync/service.py`: lògica d'extracció del `.zip` → SQLite intern de MoneyWiz (Core Data, taula `ZSYNCOBJECT`)
-- [x] Parser de comptes (`mw_accounts`): 7 tipus (checking, savings, cash, credit, loan, investment, forex)
-- [x] Parser de categories (`mw_categories`): jerarquia resoluble en 2 passos (pares primer, self-join per FKs)
-- [x] Parser de transaccions (`mw_transactions`): 6 tipus, imports positius, timestamps Apple epoch, category via JOIN
-- [x] Parser inversions: `investment_buy`/`investment_sell` amb `shares` (ZNUMBEROFSHARES) i `mw_symbol` (ZSYMBOL1)
-- [x] Estratègia mirror: `ON CONFLICT DO UPDATE` + `_prune_removed()` esborra el que ja no és al ZIP
-- [x] `modules/sync/router.py`: `POST /api/v1/sync/upload`, `GET /api/v1/sync/status`, `GET /api/v1/sync/batches`
-- [x] Audit trail complet: `ImportBatch` sempre es crea (status=failed si hi ha error)
-- [x] Trigger post-upload: crida `networth_service.generate_snapshot()` automàticament (non-fatal)
-- [x] 34 tests: schema BD, parser pur (sense BD), endpoints + test d'idempotència
-
-### 1.3 Snapshot de Net Worth ✅
-Total des de `mw_accounts.current_balance` (font de veritat). Desglossat per asset via `shares × preu YF`. Idempotent per data. Trigger automàtic post-sync. Scripts CLI per a ús diari.
-
-- [x] `modules/networth/service.py`: `generate_snapshot()` — cash + inv + liab des de MW, posicions (shares × preu) per asset
-- [x] `modules/networth/router.py`: `POST /api/v1/networth/snapshot`, `GET /api/v1/networth/history?period=1y`
-- [x] `modules/networth/models.py`: `NetWorthSnapshot`, `AssetSnapshot` (uq_networth_date, CASCADE delete)
-- [x] `modules/networth/schemas.py`: `GenerateSnapshotResponse`, `NetWorthHistoryResponse`, `NetWorthSnapshotOut`, `AssetSnapshotOut`
-- [x] Trigger automàtic: `process_upload()` crida `generate_snapshot(trigger_source="sync")` post-import
-- [x] `change_eur` / `change_pct` calculats vs. snapshot anterior (no necessàriament el dia anterior)
-- [x] `scripts/net_worth.py` + `make net-worth`: resum CLI amb comptes, posicions per asset, P&L, últim snapshot
-- [x] `tests/test_networth.py`: 15 tests (schema BD, endpoints POST/GET, lògica de servei amb dades sintètiques)
+- [ ] Instal·lar com a PWA al Safari iOS: obrir URL → Compartir → Afegir a pantalla d'inici
+- [ ] Verificar mode standalone (sense barra d'adreça)
+- [ ] Revisar totes les pantalles a 390px (iPhone)
+- [ ] Anotar problemes UX/visual per a Fase 8
+- [ ] **✓ MILESTONE: PWA instal·lada i funcional al mòbil**
 
 ---
 
-## FASE 2 — MVP V1.0: Dashboard & Portfolio ✅
-**Objectiu:** Primera pantalla funcional amb dades reals. El moment "wow" del projecte.
-**Estat:** Completada al 100%. Dashboard + Portfolio visuals amb dades reals. 47 tests frontend verds.
+## FASE 8 — Polish UX/UI (post-test mòbil)
 
-### 2.1 Backend Portfolio API ✅
-> `modules/portfolio/` amb lògica de rebalanceig i resum. Networth history amb `asset_snapshots` complets (display_name, ticker_yf, color_hex, pnl_eur). Fix crítics: camp `unrealized_pnl_eur` → `pnl_eur` (alineació frontend/backend), i el router retornava `asset_snapshots: []` hardcoded.
+Prioritats identificades durant el test mòbil:
 
-- [x] `modules/portfolio/service.py`:
-  - [x] `get_portfolio_summary()`: net worth total, canvi diari, % canvi
-  - [x] `get_asset_breakdown()`: per asset via `asset_snapshots` — shares, preu, valor, cost basis, P&L €, P&L %, pes real
-  - [x] `get_rebalancing()`: assets sobreponderat/infraponderat + import a moure, ordent per urgència
-  - [ ] `get_on_track_status()`: compara net worth vs. projecció base *(Fase 3 — requereix motor simulació)*
-- [x] `modules/portfolio/router.py`:
-  - [x] `GET /api/v1/portfolio/summary`
-  - [x] `GET /api/v1/portfolio/rebalance`
-- [x] Fix `networth/router.py`: ara retorna `asset_snapshots` amb JOIN a `assets` (display_name, ticker_yf, color_hex)
-- [ ] Cost basis FIFO *(Fase 3 — implementat amb cost basis simple ara; FIFO quan s'implementi historial fiscal)*
+### 8.1 Gràfics
+- [ ] Redissenyar `ProjectionChart` (simulació): més llegible, labels millors, grids subtils
+- [ ] Charts d'analytics (despeses, flux caixa): millorar estètica, llegibilitat en pantalla petita
+- [ ] Net worth evolution: anotacions d'events importants sobre la línia
+- [ ] Consistència visual entre tots els gràfics (paleta, tipografia, espais)
 
-### 2.2 Frontend Dashboard ✅
-> React 18 + TypeScript + Vite 5. Design system Liquid Glass. SVG pur per a tots els gràfics. TanStack Query + Zustand. 47 tests Vitest.
+### 8.2 Simulació
+- [ ] Simplificar el flow: slider + resultats en un sol scroll, sense tabs
+- [ ] Simulador Obert: UX més intuïtiva per crear i afegir events
+- [ ] Previsualització en temps real mentre s'afegeix un event (sense botó "Comparar")
+- [ ] Cards de resum de simulació més llegibles (valors finals destacats)
 
-- [x] Scaffold complet amb Vite + React + TypeScript (`frontend/` reorganitzat)
-- [x] Design tokens CSS (dark/light via classe `<html>.dark`) + Card, NavBar, StatusDot, TimeSelector
-- [x] `features/dashboard/`: HeroValue, ChartSection (PortfolioChart morfing SVG), StatusCards, Allocation (DonutChart + llista), TopMovers, Alerts
-- [x] GoalRing SVG per a l'objectiu d'habitatge
-- [x] Loading skeletons + timestamp actualització + StatusDot live/stale
+### 8.3 Configuració
+- [ ] Redisseny complet de `SettingsScreen`: UI d'app real, no formulari web
+- [ ] Edició inline amb feedback visual millor (no tap-to-edit ocult)
+- [ ] Grups visuals clars entre seccions
+- [ ] Indicador de "canvis pendents de guardar" si aplica
 
-### 2.3 Frontend Portfolio ✅
-- [x] `features/portfolio/PortfolioScreen.tsx`: llista assets amb shares, preu actual, valor €, P&L €/%, pes cartera
-- [x] Cards agrupades amb border radius fluid (primera/última/intermèdies)
-- [x] Bottom NavBar: Inici | Cartera | (Sim | Hist | Config pendents)
+### 8.4 Historial de transaccions
+- [ ] Mostrar nom del payee (taula `mw_payees`) a cada transacció
+- [ ] Mostrar categoria (taula `mw_categories`) amb color + icona
+- [ ] Cerca per text (descripció, payee, categoria)
+- [ ] Agrupació per dia/setmana amb subtotals
+- [ ] Millor badge visual per tipus de transacció (compra, venda, ingrés, despesa)
 
-### 2.4 Validació Fase 2 ✅
-- [x] Net worth real visible al Dashboard: 23.862,98 € (dades MoneyWiz + YF)
-- [x] 5 assets amb preus reals a la cartera (Japan i Europe Defence sense posició actual)
-- [x] DonutChart + gràfic morfing renderitzats correctament (390px)
-- [x] Rebalanceig: MSCI World +31.31% (sobreponderat), Japan -6% (missing)
-- [x] Dark/light toggle via Zustand + classe `<html>.dark`
-- [x] Endpoints verificats: `/api/v1/portfolio/summary`, `/api/v1/portfolio/rebalance`, `/api/v1/networth/history`
+### 8.5 Net Worth — visibilitat de comptes
+- [ ] Desglossar `cash_and_bank_value` per compte (taula `mw_accounts`)
+- [ ] Mostrar saldo de cada compte a la pantalla principal (o expandible)
+- [ ] Indicar quin compte té la liquiditat (compte corrent vs. estalvi)
+- [ ] Distingir visualment entre efectiu, inversions, altres actius
 
 ---
 
-## FASE 3 — MVP V1.0: Simulació & Historial ✅
-**Objectiu:** Motor de simulació + historial de transaccions. Tancar V1.0 MVP funcional.
-**Estat:** Completada al 100%. Motor de simulació + historial operatius. TypeScript 0 errors.
+## FASE 9 — iOS Natiu amb Capacitor (Opcional)
 
-### 3.1 Backend Motor de Simulació ✅
-> `modules/simulation/`: motor pur (`engine.py`) + servei + router. Retorn ponderat per pesos actuals de cartera. Objectiu habitatge inclòs al gràfic (línia groga).
-
-- [x] `modules/simulation/engine.py`: funció pura `project()` — FV = PV×(1+r)^n + PMT×[(1+r)^n−1]/r; helper `cagr()`, `monthly_rate()`
-- [x] Retorn ponderat de cartera: blended = Σ(weight_i × return_i) dels actuals de l'últim snapshot
-- [x] 3 escenaris llegits de la taula `scenarios`: adverse (2.42%), base (6.38%), optimistic (10.34%)
-- [x] `GET /api/v1/simulation/scenarios` — escenaris + contribucions actives + cartera actual
-- [x] `GET /api/v1/simulation/project?horizon_years=10&monthly_contribution=X` — projecció 3 escenaris
-  - Retorna sèrie mensual completa per a cada escenari (121 punts per 10 anys)
-  - Mètriques: end_value, total_return_eur/pct, cagr_pct, total_contributions_eur
-  - Objectiu habitatge: target_amount + target_date des de la taula `objectives`
-- [ ] Cache de resultats en `simulation_results` *(futur — peticions freqüents s'acceleren ja que TanStack Query fa caching al client)*
-- [ ] Contribucions extraordinàries *(Fase 4)*
-
-### 3.2 Backend Historial ✅
-> `modules/history/`: transaccions paginades + resum per asset amb P&L calculat des de preus actuals YF.
-
-- [x] `modules/history/service.py`:
-  - [x] `get_transactions()`: paginació + filtres (tx_type, ticker_yf, date_from, date_to)
-  - [x] `get_investment_summary()`: per asset — shares, total invertit, cost mig, valor actual, P&L €/%
-- [x] `modules/history/router.py`:
-  - [x] `GET /api/v1/history/transactions` — 1.471 transaccions paginades
-  - [x] `GET /api/v1/history/investments` — resum per asset amb preus YF actuals
-- [ ] `GET /api/v1/history/tax-report?year=2025` — plusvàlues IRPF *(Fase 4 — requereix implementació FIFO)*
-
-### 3.3 Frontend Simulació ✅
-> `features/simulation/SimulationScreen.tsx` + `components/charts/ProjectionChart.tsx` (SVG reutilitzable)
-
-- [x] `ProjectionChart.tsx`: SVG 3 línies (adverse/base/optimistic) amb animació d'entrada (700ms, ease-out cubic)
-  - Àrea sombreada entre advers i optimista, línia d'objectiu (groga puntejada), dots al final
-  - X-axis: etiquetes d'anys adaptatives, Y-axis: format k/M€
-- [x] `SimulationScreen.tsx`:
-  - Slider d'horitzó 1–30 anys amb marks clickables
-  - Cards de resultat per escenari (end value, rendiment %, CAGR)
-  - ContributionInfo: aportació mensual + total aportat a l'horitzó
-  - Taula de retorns ponderats per escenari
-  - Línia objectiu habitatge visible al gràfic si dins del rang
-
-### 3.4 Frontend Historial ✅
-> `features/history/HistoryScreen.tsx` — investment summary + llista de transaccions
-
-- [x] Resum inversions: total invertit, P&L total €/%, llistat per asset amb shares/cost mig/P&L
-- [x] Transaccions paginades (25/pàgina) amb filtres per tipus (pills)
-- [x] Paginació amb "Anterior / Següent"
-- [x] TransactionRow: tipus badge, descripció, data, import, shares per inversions
-
-### 3.5 PWA — Instal·lació Mòbil
-- [ ] `manifest.json` complet: icones múltiples, theme_color, display: standalone
-- [ ] Banner "Afegir a pantalla d'inici" per iOS Safari
-- [ ] Test instal·lació com a PWA a iPhone real
-
-### 3.6 Validació V1.0 MVP
-- [x] Dashboard → Portfolio → Simulació → Historial navegables
-- [x] MoneyWiz backup sincronitzat (1.471 transaccions)
-- [x] Simulació 10 anys: base €125.742, advers €98.718, optimista €160.911
-- [x] TypeScript 0 errors (`make check-fe`)
-- [ ] App instal·lable com a PWA a l'iPhone *(Fase 4)*
-- [ ] **V1.0 MVP FUNCIONAL LOCAL — MILESTONE 1** 🎯 *(pendent validació visual per l'usuari)*
-
----
-
-## FASE 4 — V2.0: Gestió de Configuració via UI ✅
-**Objectiu:** Zero fitxers de configuració. Tot editable des de la interfície.
-**Estat:** Completada al 100%. Backend CRUD complet + SettingsScreen amb 5 seccions + toast feedback.
-
-### 4.1 Backend Config APIs (CRUD complet) ✅
-> `modules/config/` — schemas.py, service.py, router.py. Raw SQL async amb SQLAlchemy. SET clauses dinàmics per a PATCH. Upsert per a escenaris.
-
-- [x] `modules/config/schemas.py`: AssetConfigOut/Patch/Create, ContributionOut/Patch/Create, ScenarioRow/Patch, ObjectiveOut/Patch, ParameterOut/Patch
-- [x] `modules/config/service.py`: CRUD async per a les 5 entitats; `get_total_target_weight()` per validació
-- [x] `modules/config/router.py` amb 14 endpoints:
-  - [x] `GET /api/v1/config/assets` — 8 assets amb target_weight, is_active, ticker_yf
-  - [x] `POST /api/v1/config/assets` — crear nou asset
-  - [x] `PATCH /api/v1/config/assets/{id}` — editar qualsevol camp
-  - [x] `GET /api/v1/config/assets/weight-check` — suma target_weight dels actius actius
-  - [x] `GET/POST/PATCH/DELETE /api/v1/config/contributions` — 7 contribucions (€575/mes total)
-  - [x] `GET /api/v1/config/scenarios` — matriu 8×3 (assets × escenaris)
-  - [x] `PATCH /api/v1/config/scenarios/{asset_id}/{scenario_type}` — upsert retorn esperat
-  - [x] `GET/PATCH /api/v1/config/objectives` — 2 objectius (fons emergència + habitatge)
-  - [x] `GET/PATCH /api/v1/config/parameters` — 19 paràmetres editables (personal/portfolio/simulation/tax/ui)
-- [x] Validació: weight-check retorna alerta si la suma ≠ 100% (ara 87%, 13% pendent Cash)
-- [x] `core/api.ts` ampliat amb `patch()` i `del()` per suportar PATCH i DELETE des del frontend
-
-### 4.2 Frontend Configuració ✅
-> `features/settings/SettingsScreen.tsx` + `hooks/useConfig.ts`. Inline editing sense formularis —tap sobre el valor per editar.
-
-- [x] `hooks/useConfig.ts`: 12 hooks TanStack Query (useQuery + useMutation) per a totes les entitats
-  - Invalidació automàtica de queries relacionades (canvi escenari → invalida simulació)
-- [x] `features/settings/SettingsScreen.tsx` amb 5 tabs scrollables:
-  - [x] **Assets**: pes objectiu editable inline, ticker YF, toggle actiu/inactiu per asset; badge weight-check
-  - [x] **Aportacions**: import mensual + dia del mes editables, toggle activa; total actiu destacat
-  - [x] **Escenaris**: grid compact asset × (advers/base/optimista), valors editables inline per cel·la
-  - [x] **Objectius**: target_amount, target_date, toggle actiu per objectiu
-  - [x] **Paràmetres**: agrupats per categoria (personal/portfolio/simulation/tax/ui), tots editables
-- [x] `InlineField`: component reutilitzable per tap-to-edit (Enter guarda, Escape cancel·la)
-- [x] `ToggleField`: switch animat per booleans
-- [x] `Toast`: notificació success/error (2.4s, animació slideDown, bottom-centered)
-- [x] Tabs scroll horitzontal (overflow-x: auto) per encaixar en 390px
-
-### 4.3 Validació Fase 4 ✅
-- [x] 8 assets llistats amb pesos, tickers, toggle actiu/inactiu
-- [x] 7 contribucions editables (total €575/mes actiu)
-- [x] Matriu 8×3 escenaris: advers 2.42%, base 6.38%, optimista 10.34% (ponderats)
-- [x] 2 objectius (fons emergència €15k, habitatge €80k)
-- [x] 19 paràmetres editables agrupats per categoria
-- [x] Toast de confirmació en cada guardat
-- [x] Canvis persistits a PostgreSQL via PATCH/POST/DELETE
-
----
-
-## FASE 5 — V2.0: Analítica Personal & Simulador Obert ✅
-**Objectiu:** Anàlisi profunda de finances personals i simulador de qualsevol escenari imaginable.
-
-### 5.1 Backend Analítica Personal ✅
-- [x] `modules/analytics/service.py`:
-  - [x] `get_expense_breakdown(year, month)`: top 12 categories, % del total
-  - [x] `get_networth_evolution(months)`: net worth mensual últims N mesos
-  - [x] `get_cashflow(months)`: ingressos vs. despeses vs. inversions mensuals
-  - [x] `get_alerts()`: categories > 2x mitjana, despeses > +30/50% avg, savings rate < 10%
-- [x] `modules/analytics/router.py`:
-  - [x] `GET /api/v1/analytics/expenses?year=2025&month=3`
-  - [x] `GET /api/v1/analytics/cashflow?months=12`
-  - [x] `GET /api/v1/analytics/evolution?months=24`
-  - [x] `GET /api/v1/analytics/alerts`
-
-### 5.2 Backend Simulador Obert ✅
-- [x] Nou servei open simulator a `modules/simulation/service.py`:
-  - [x] Suport escenaris amb nom (guardar a `simulations` table)
-  - [x] Events de vida modelables: one_time_out/in, contribution_change, return_override
-  - [x] Comparació fins a N escenaris simultanis + baseline
-- [x] `GET/POST /api/v1/simulation/saved` — llista i crea escenaris guardats
-- [x] `POST /api/v1/simulation/compare` — compara N escenaris, retorna sèries temporals
-- [x] CRUD events: `POST /api/v1/simulation/saved/{id}/events`, `DELETE /api/v1/simulation/events/{id}`
-
-### 5.3 Frontend Analítica Personal ✅
-- [x] `AnalyticsScreen.tsx` amb 3 tabs: Despeses / Flux de Caixa / Evolució
-- [x] **Despeses per Categoria**: bar chart horitzontal top 12, filtrable per any i mes
-- [x] **Flux de Caixa**: grouped bar chart SVG 3 barres/mes + summary cards
-- [x] **Evolució Net Worth**: line chart SVG amb 2 línies (total + inversió)
-- [x] **Alertes Automàtiques**: banner amb severitat (info/warning/critical)
-- [x] Navegació afegida al NavBar (6è element, icona de barres)
-
-### 5.4 Frontend Simulador Obert ✅
-- [x] `OpenSimulator.tsx` integrat a SimulationScreen com a tab "Personalitzat"
-- [x] Llista d'escenaris guardats amb cards
-- [x] Crear simulació: nom, escenari base, horitzó en mesos
-- [x] Gestió d'events per simulació (afegir/eliminar)
-- [x] Comparació multi-sèrie amb gràfic SVG + taula de valors finals
-
-### 5.5 Validació V2.0 Complet ✅
-- [x] Breakdown de despeses renderitzat des de dades reals de MoneyWiz
-- [x] Escenaris personals creables i comparables gràficament
-- [x] Net worth evolution dels últims 24 mesos visible
-- [x] **V2.0 FUNCIONAL LOCAL — MILESTONE 2** 🎯
-
----
-
-## FASE 6 — Migració a Oracle Cloud (Producció)
-**Objectiu:** Desplegar sobre la infraestructura existent de la VM. La VM ja té PostgreSQL (TimescaleDB), Python 3.12, Nginx i Systemd — cap instal·lació nova necessària.
-
-### 6.1 Preparació del codi per a producció
-- [ ] Variables d'entorn separades: `.env.dev` (local Docker) i `.env.prod` (VM)
-- [ ] `requirements.txt` tancat amb versions exactes (`pip freeze > requirements.txt`)
-- [ ] Afegir `gunicorn` com a servidor WSGI per a producció (vs. `uvicorn --reload` en dev)
-- [ ] Script `deployment/deploy.sh`: `git pull` + `pip install` + `alembic upgrade head` + `systemctl restart wealthpilot`
-- [ ] Validar que no hi ha cap path hardcoded ni secret al codi
-
-### 6.2 Oracle Cloud VM — Configuració (infraestructura ja existent)
-- [ ] Obrir ports 80 i 443 a la **Security List d'OCI** (pas crític, sovint oblidat)
-- [ ] Obrir ports 80 i 443 a `iptables` del sistema si hi ha firewall local actiu
-- [ ] Crear base de dades: `CREATE DATABASE wealthpilot;` sobre la instància TimescaleDB existent
-- [ ] Crear usuari PostgreSQL dedicat: `CREATE USER wealthpilot_user WITH PASSWORD '...';`
-- [ ] Crear entorn virtual Python: `python3.12 -m venv /opt/wealthpilot/venv`
-- [ ] Clonar repo a `/opt/wealthpilot/app`
-
-### 6.3 Systemd Service per a FastAPI
-- [ ] Crear `/etc/systemd/system/wealthpilot.service`:
-  ```ini
-  [Unit]
-  Description=WealthPilot FastAPI Backend
-  After=network.target postgresql.service
-
-  [Service]
-  User=wealthpilot
-  WorkingDirectory=/opt/wealthpilot/app/backend
-  EnvironmentFile=/opt/wealthpilot/.env.prod
-  ExecStart=/opt/wealthpilot/venv/bin/gunicorn main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 127.0.0.1:8000
-  Restart=always
-
-  [Install]
-  WantedBy=multi-user.target
-  ```
-- [ ] `systemctl enable wealthpilot && systemctl start wealthpilot`
-
-### 6.4 Nginx Virtual Host
-- [ ] Afegir fitxer a `/etc/nginx/sites-available/wealthpilot`:
-  - Servir `/` → fitxers estàtics del frontend
-  - Proxy `/api/` → `http://127.0.0.1:8000`
-- [ ] `nginx -t && systemctl reload nginx`
-
-### 6.5 HTTPS & Domini (quan estigui disponible)
-- [ ] Certbot: `certbot --nginx -d [domini]` (auto-renovació cada 90 dies ja configurada a la VM)
-- [ ] HSTS headers activats a Nginx
-- [ ] *Sense domini: accés per IP pública és suficient per a les fases inicials*
-
-### 6.6 Backup & Recuperació
-- [ ] Script diari: `pg_dump wealthpilot | gzip > /backups/wealthpilot-$(date +%Y%m%d).sql.gz`
-- [ ] Retenció 7 dies locals + Oracle Object Storage (gratuït fins 20GB) per a 30 dies
-- [ ] Script de restore documentat i testat en local abans de desplegar
-- [ ] Cron job: `0 3 * * * /opt/wealthpilot/scripts/backup.sh`
-
-### 6.7 Monitoratge Bàsic
-- [ ] UptimeRobot (free tier): monitoreja `GET /health` cada 5 minuts
-- [ ] Logs: `journalctl -u wealthpilot` + rotació automàtica via systemd
-- [ ] Alerta simple d'espai en disc (script cron)
-
-### 6.8 Validació Migració ✅
-- [ ] App accessible per IP pública de Oracle Cloud
-- [ ] MoneyWiz sync funcionant des de l'iPhone en xarxa mòbil (no WiFi local)
-- [ ] Backup automàtic executat i restauració testada
-- [ ] **PRODUCCIÓ LIVE — MILESTONE 3** 🎯
-
----
-
-## FASE 7 — iOS Natiu amb Capacitor (Opcional, Futur)
-**Objectiu:** Empaquetar la PWA com a app nativa d'iOS per a millor UX i distribució via TestFlight.
-
-### 7.1 Integració Capacitor
-- [ ] Instal·lar `@capacitor/core` i `@capacitor/ios`
-- [ ] `capacitor.config.json`: apunta al servidor de producció
-- [ ] Revisar plugins necessaris: `@capacitor/push-notifications`, `@capacitor/share`, `@capacitor/haptics`
-- [ ] Generar projecte Xcode (`npx cap add ios`)
-
-### 7.2 iOS Shortcut per MoneyWiz Sync
-- [ ] Shortcut d'iOS que: detecta nou backup de MoneyWiz → puja a `POST /api/v1/sync/upload` automàticament
-- [ ] Autenticació amb API key (header `X-API-Key`)
+- [ ] `@capacitor/core` + `@capacitor/ios`
+- [ ] iOS Shortcut: backup MoneyWiz → auto-push a `/api/v1/sync/upload`
 - [ ] Notificació push post-sync
-
-### 7.3 Distribució TestFlight
-- [ ] Apple Developer Account (€99/any)
-- [ ] Build via Xcode + arxivat
-- [ ] Distribució interna via TestFlight
+- [ ] Distribució TestFlight (requereix Apple Developer Account, €99/any)
 
 ---
 
-## FASE 8+ — Features Futures (Backlog)
-*Ordenades per valor percebut, no necessàriament en aquest ordre.*
+## Backlog (futur)
 
-### Nous Mòduls
-- [ ] **Immobles**: afegir immobles al net worth (valor estimat, hipoteca, rendibilitat)
-- [ ] **Pensions**: integrar Seguretat Social + plans de pensions privats
-- [ ] **Targetes de crèdit**: tracking de límit, deute pendent, venciments
-- [ ] **Divises**: exposició a divisa per asset, cobertura natural
-
-### Millores de Simulació
-- [ ] Inflació com a paràmetre explícit (valor real vs. nominal)
-- [ ] Modelació de jubilació (quan puc jubilar-me amb X€/mes?)
-- [ ] Monte Carlo simulation (N iteracions aleatòries → distribució de resultats)
-- [ ] Optimitzador de cartera (Markowitz o versió simplificada)
-
-### Millores d'UX
-- [ ] Mode fosc / clar (ara sempre fosc)
-- [ ] Widgets iOS (Capacitor + WidgetKit)
-- [ ] Notificacions push per alertes (desviació > threshold)
-- [ ] Exportació PDF d'informes (fiscal anual, resum de cartera)
-- [ ] Múltiples monedes (ara sempre EUR)
-
-### Integracions Externes
-- [ ] Importació automàtica des de broker (Interactive Brokers API, si aplica)
-- [ ] Integració Bizum/Revolut per despeses ràpides
-- [ ] Open Banking (PSD2) per importar moviments bancaris directament
-
-### Infraestructura
-- [ ] Redis per a cache de preus (TTL configurable, evitar rate limit Yahoo)
-- [ ] Celery + Redis per a tasques asíncrones (recàlcul simulacions en background)
-- [ ] CI/CD pipeline (GitHub Actions: test → build → deploy)
-- [ ] Tests automatitzats: pytest per backend, Playwright per frontend E2E
-
----
-
-## Principis d'Arquitectura No Negociables
-
-| Principi | Implementació |
-|----------|---------------|
-| API-first | Tot passa per `/api/v1/`. La UI mai calcula res. |
-| Single source of truth | PostgreSQL és l'únic lloc on viuen paràmetres i configuració |
-| Idempotent per defecte | Pujar el mateix backup 2 vegades → 0 efectes secundaris |
-| Mòdul = carpeta | Afegir feature = crear carpeta. Cap fitxer core es toca. |
-| Versionat des del dia 1 | `/api/v1/` prefix. Alembic per a DB. Semver per a releases. |
-| Mobile-first | Totes les vistes dissenyades per 390px primer, desktop après |
-| Zero paràmetres en codi | Qualsevol número configurable va a `parameters` table |
-
----
-
-## Eines de Desenvolupament Recomanades
-
-| Eina | Ús |
-|------|----|
-| **Chrome DevTools** | Simulació mòbil (iPhone 14 Pro, 390×844) en local |
-| **TablePlus / DBeaver** | Client PostgreSQL visual per inspeccionar dades |
-| **Bruno / Insomnia** | Test d'endpoints API (alternativa a Postman, sense cloud) |
-| **http://[IP-Mac]:8080** | Test en iPhone/iPad real per WiFi sense cap configuració extra |
-
----
-
-*Última actualització: 26 Març 2026 — Fase 0 (0.1–0.4) completada i verificada*
+- Immobles al net worth (valor, hipoteca, rendibilitat)
+- Jubilació: simulació "quan puc jubilar-me amb X€/mes?"
+- Monte Carlo simulation per a la projecció
+- Exportació PDF d'informes fiscals
+- Inflació com a paràmetre explícit (valor real vs. nominal)
+- Múltiples monedes
+- Open Banking / importació automàtica de broker
