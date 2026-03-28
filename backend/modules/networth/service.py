@@ -53,6 +53,17 @@ async def generate_snapshot(
         snapshot_date = date.today()
 
     # ── 1. Account balances des de MoneyWiz ─────────────────────────────────
+    #
+    # Nota sobre comptes d'inversió (account_type='investment'):
+    #   mw_accounts.current_balance per a un compte d'inversió = únicament el cash
+    #   no invertit (EUR líquid dins de TR, etc.). El valor de les accions/ETFs/crypto
+    #   NO és inclòs — es calcula al pas 2 via shares × preu YF.
+    #
+    #   Per tant:
+    #     cash_value  = checking + savings + cash + forex + INVESTMENT CASH
+    #     inv_value   = shares × preu YF (calculat al pas 2)
+    #     liab_value  = credit + loan
+    #     total       = cash_value + inv_value - liab_value
     balances = (await db.execute(text("""
         SELECT account_type, SUM(current_balance) AS total
         FROM mw_accounts
@@ -63,19 +74,18 @@ async def generate_snapshot(
     """))).fetchall()
 
     cash_value = Decimal("0")
-    inv_value  = Decimal("0")
     liab_value = Decimal("0")
 
     for row in balances:
         amount = Decimal(str(row.total))
-        if row.account_type in _CASH_ACCOUNT_TYPES:
+        if row.account_type in _CASH_ACCOUNT_TYPES or row.account_type in _INV_ACCOUNT_TYPES:
+            # Investment account balance = cash no invertit → compta com a efectiu
             cash_value += amount
-        elif row.account_type in _INV_ACCOUNT_TYPES:
-            inv_value += amount
         elif row.account_type in _LIAB_ACCOUNT_TYPES:
             liab_value += amount
 
-    total_net_worth = cash_value + inv_value - liab_value
+    # inv_value s'assigna després del pas 2 (shares × preu YF)
+    inv_value = Decimal("0")
 
     # ── 2. Posicions per asset (shares × preu YF actual) ────────────────────
     positions_rows = (await db.execute(text("""
@@ -144,13 +154,18 @@ async def generate_snapshot(
             "unrealized_pnl_pct": pnl_pct,
         })
 
-    # Calcular pes de cada asset sobre la cartera d'inversió
+    # inv_value = total de shares × preu YF (tots els actius traçats)
     total_tracked_value = sum(a["value_eur"] for a in asset_data)
+    inv_value = total_tracked_value
+
+    # Calcular pes de cada asset sobre la cartera d'inversió
     for a in asset_data:
         a["weight_actual_pct"] = (
             (a["value_eur"] / total_tracked_value * 100).quantize(Decimal("0.01"))
             if total_tracked_value else None
         )
+
+    total_net_worth = cash_value + inv_value - liab_value
 
     # ── 3. Canvi vs. snapshot anterior ──────────────────────────────────────
     prev = (await db.execute(text("""

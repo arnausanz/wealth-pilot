@@ -126,13 +126,33 @@ def _open_sqlite(zip_bytes: bytes) -> tuple[sqlite3.Connection, tempfile.Tempora
 
 
 def _read_accounts(conn: sqlite3.Connection) -> list[dict]:
-    """Extreu tots els comptes (Z_ENT 10-16)."""
+    """
+    Extreu tots els comptes (Z_ENT 10-16) amb el balanç calculat des de transaccions.
+
+    MoneyWiz no guarda el balanç actual en cap camp de ZSYNCOBJECT (ZBALLANCE és
+    sempre 0 o NULL). El balanç real és:
+        ZOPENINGBALANCE + SUM(ZAMOUNT1 de totes les transaccions del compte)
+    Els ZAMOUNT1 ja estan signats (negatiu per a sortides, positiu per a entrades).
+    """
     ent_ids = ",".join(str(e) for e in _ACCOUNT_TYPE_MAP)
     rows = conn.execute(f"""
-        SELECT Z_PK, Z_ENT, ZNAME, ZCURRENCYNAME, ZBALLANCE, ZARCHIVED, ZINCLUDEINNETWORTH
-        FROM ZSYNCOBJECT
-        WHERE Z_ENT IN ({ent_ids})
-        ORDER BY Z_PK
+        SELECT
+            a.Z_PK,
+            a.Z_ENT,
+            a.ZNAME,
+            a.ZCURRENCYNAME,
+            a.ZARCHIVED,
+            a.ZINCLUDEINNETWORTH,
+            COALESCE(a.ZOPENINGBALANCE, 0) +
+            COALESCE((
+                SELECT SUM(t.ZAMOUNT1)
+                FROM ZSYNCOBJECT t
+                WHERE t.ZACCOUNT2 = a.Z_PK
+                  AND t.ZAMOUNT1 IS NOT NULL
+            ), 0) AS current_balance
+        FROM ZSYNCOBJECT a
+        WHERE a.Z_ENT IN ({ent_ids})
+        ORDER BY a.Z_PK
     """).fetchall()
     return [
         {
@@ -140,7 +160,7 @@ def _read_accounts(conn: sqlite3.Connection) -> list[dict]:
             "name": r["ZNAME"] or "Unknown",
             "account_type": _ACCOUNT_TYPE_MAP[r["Z_ENT"]],
             "currency": r["ZCURRENCYNAME"] or "EUR",
-            "current_balance": float(r["ZBALLANCE"]) if r["ZBALLANCE"] is not None else None,
+            "current_balance": float(r["current_balance"]),
             "is_active": not bool(r["ZARCHIVED"]),
             "include_in_networth": bool(r["ZINCLUDEINNETWORTH"]) if r["ZINCLUDEINNETWORTH"] is not None else True,
         }
