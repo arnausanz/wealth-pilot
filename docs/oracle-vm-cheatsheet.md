@@ -9,11 +9,9 @@
 > - **Contrasenya BD:** `WealthPilot2026x`
 > - **Port BD:** `5433` (⚠️ no és el 5432 estàndard!)
 > - **SECRET_KEY app:** `316981b84ae15a43f69dad1bc0798a5aeabe3f7c8f4c4de88f4afc782c408136`
+> - **APP_PASSWORD (login web):** `qosteH-2caccy-poxkot`
 > - **URL app:** `https://79-76-110-205.sslip.io`
 > - **Fitxer .env.prod a la VM:** `/opt/wealthpilot/.env.prod`
-> - **Basic Auth usuari:** `arnau`
-> - **Basic Auth contrasenya:** `qosteH-2caccy-poxkot`
-> - **Fitxer htpasswd:** `/etc/nginx/.htpasswd`
 
 > ⚠️ Cada secció indica on s'executa: **[MAC]** o **[VM]**
 
@@ -180,12 +178,19 @@ sudo certbot renew --force-renewal
 
 **Pas 2 — Pujar a la VM [MAC]:**
 ```bash
-# Substitueix /path/al/backup pel path real del fitxer
-curl -X POST https://79-76-110-205.sslip.io/api/v1/sync/upload \
+# Primer: obtenir cookie de sessió
+curl -c /tmp/wp_cookie.txt \
+  -X POST https://79-76-110-205.sslip.io/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"password":"qosteH-2caccy-poxkot"}'
+
+# Segon: pujar el backup amb la cookie
+curl -b /tmp/wp_cookie.txt \
+  -X POST https://79-76-110-205.sslip.io/api/v1/sync/upload \
   -F "file=@/path/al/backup.moneywiz"
 ```
 
-> Si el fitxer és `.zip`: canvia `.moneywiz` per `.zip` a la comanda.
+> Si el fitxer és `.zip`: canvia `.moneywiz` per `.zip` a la segona comanda.
 
 **Pas 3 — Verifica que s'han importat les dades [VM]:**
 ```bash
