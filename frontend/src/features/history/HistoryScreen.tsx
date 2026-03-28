@@ -34,7 +34,7 @@ const FILTER_PILLS = [
 
 // ─── Investment summary per asset ─────────────────────────────────────────────
 
-function AssetSummaryRow({ asset }: { asset: AssetInvestmentSummary }) {
+function AssetSummaryRow({ asset, isLast }: { asset: AssetInvestmentSummary; isLast: boolean }) {
   const color   = asset.color_hex || ASSET_COLORS[asset.ticker_yf || ''] || ASSET_COLOR_DEFAULT;
   const ticker2 = asset.display_name.slice(0, 2).toUpperCase();
   const pnl     = n(asset.pnl_eur);
@@ -48,7 +48,7 @@ function AssetSummaryRow({ asset }: { asset: AssetInvestmentSummary }) {
         alignItems: 'center',
         gap: 12,
         padding: '12px 0',
-        borderBottom: '1px solid var(--color-glass-border)',
+        borderBottom: isLast ? 'none' : '1px solid var(--color-glass-border)',
       }}
     >
       {/* Icon */}
@@ -127,7 +127,7 @@ function AssetSummaryRow({ asset }: { asset: AssetInvestmentSummary }) {
 
 // ─── Transaction row ──────────────────────────────────────────────────────────
 
-function TransactionRow({ tx }: { tx: TransactionOut }) {
+function TransactionRow({ tx, isLast }: { tx: TransactionOut; isLast: boolean }) {
   const color     = tx.color_hex || ASSET_COLORS[tx.ticker_yf || ''] || TX_COLORS[tx.tx_type] || ASSET_COLOR_DEFAULT;
   const amount    = n(tx.amount_eur);
   const label     = TX_LABELS[tx.tx_type] || tx.tx_type;
@@ -145,7 +145,7 @@ function TransactionRow({ tx }: { tx: TransactionOut }) {
         alignItems: 'center',
         gap: 12,
         padding: '10px 0',
-        borderBottom: '1px solid rgba(255,255,255,0.04)',
+        borderBottom: isLast ? 'none' : '1px solid var(--color-glass-border)',
       }}
     >
       {/* Type badge */}
@@ -356,8 +356,8 @@ export function HistoryScreen() {
               </div>
 
               {/* Per-asset rows */}
-              {investments.assets.map((asset) => (
-                <AssetSummaryRow key={asset.asset_id} asset={asset} />
+              {investments.assets.map((asset, i) => (
+                <AssetSummaryRow key={asset.asset_id} asset={asset} isLast={i === investments.assets.length - 1} />
               ))}
             </>
           ) : null}
@@ -430,8 +430,8 @@ export function HistoryScreen() {
               Sense transaccions
             </div>
           ) : (
-            txData?.transactions.map((tx) => (
-              <TransactionRow key={tx.id} tx={tx} />
+            txData?.transactions.map((tx, i) => (
+              <TransactionRow key={tx.id} tx={tx} isLast={i === (txData.transactions.length - 1)} />
             ))
           )}
         </Card>

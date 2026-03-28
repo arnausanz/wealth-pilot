@@ -72,8 +72,8 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.4s ease, color 0.4s ease;
-  /* Prevenir overscroll/rubber-band en iOS */
-  overscroll-behavior: none;
+  /* Prevenir scroll horitzontal però permetre bounce vertical natiu d'iOS */
+  overscroll-behavior-x: none;
   /* Prevenir context menu en long-press */
   -webkit-touch-callout: none;
 }
@@ -84,7 +84,7 @@ body {
   color: var(--color-text);
   min-height: 100vh;
   overflow-x: hidden;
-  overscroll-behavior: none;
+  overscroll-behavior-x: none;
   /* Flash blau/gris en tap (iOS/Android) */
   -webkit-tap-highlight-color: transparent;
   /* Prevenir selecció de text accidental */

@@ -9,21 +9,13 @@ function AssetRow({
   asset,
   price,
   weight,
-  isFirst,
   isLast,
 }: {
   asset: AssetSnapshot;
   price?: AssetPrice;
   weight: number;
-  isFirst: boolean;
   isLast: boolean;
 }) {
-  const borderRadius = isFirst
-    ? '14px 14px 2px 2px'
-    : isLast
-    ? '2px 2px 14px 14px'
-    : '2px';
-
   const pnlEur = n(asset.pnl_eur);
   const pnlPct = n(asset.pnl_pct);
   const valueEur = n(asset.value_eur);
@@ -39,13 +31,8 @@ function AssetRow({
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        padding: '12px 14px',
-        background: 'var(--color-glass-bg)',
-        backdropFilter: 'var(--glass-blur)',
-        WebkitBackdropFilter: 'var(--glass-blur)',
-        border: '1px solid var(--color-glass-border)',
-        borderRadius,
-        boxShadow: isFirst ? 'var(--card-shadow)' : 'none',
+        padding: '12px 0',
+        borderBottom: isLast ? 'none' : '1px solid var(--color-glass-border)',
       }}
     >
       {/* Asset icon */}
@@ -208,7 +195,7 @@ export function PortfolioScreen() {
         <>
           {/* Asset list */}
           <div style={{ padding: '0 24px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <Card style={{ padding: '0 14px' }}>
               {assets.map((asset, i) => {
                 const weight = totalValue > 0 ? (n(asset.value_eur) / totalValue) * 100 : 0;
                 return (
@@ -217,12 +204,11 @@ export function PortfolioScreen() {
                     asset={asset}
                     price={priceMap.get(asset.asset_id)}
                     weight={weight}
-                    isFirst={i === 0}
                     isLast={i === assets.length - 1}
                   />
                 );
               })}
-            </div>
+            </Card>
           </div>
 
           {/* Footer total */}

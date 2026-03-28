@@ -17,6 +17,7 @@ export interface AssetSnapshot {
   pnl_eur: string | number;
   pnl_pct: string | number;
   color_hex?: string;
+  weight_actual_pct?: string | number;
 }
 
 export interface NetWorthSnapshot {

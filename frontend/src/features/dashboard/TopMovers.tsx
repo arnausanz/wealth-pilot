@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Card } from '../../components/ui/Card';
 import { n, ASSET_COLORS } from '../../types';
 import type { AssetPrice } from '../../types';
 
@@ -62,15 +63,9 @@ export function TopMovers({ prices }: TopMoversProps) {
       >
         Moviments del dia
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <Card style={{ padding: '0 14px' }}>
         {topMovers.map((price, i) => {
-          const isFirst = i === 0;
           const isLast = i === topMovers.length - 1;
-          const borderRadius = isFirst
-            ? '14px 14px 2px 2px'
-            : isLast
-            ? '2px 2px 14px 14px'
-            : '2px';
           const changePct = n(price.change_pct_1d);
           const priceClose = n(price.price_close);
           const isPositive = changePct >= 0;
@@ -85,13 +80,8 @@ export function TopMovers({ prices }: TopMoversProps) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '12px 14px',
-                background: 'var(--color-glass-bg)',
-                backdropFilter: 'var(--glass-blur)',
-                WebkitBackdropFilter: 'var(--glass-blur)',
-                border: '1px solid var(--color-glass-border)',
-                borderRadius,
-                boxShadow: isFirst ? 'var(--card-shadow)' : 'none',
+                padding: '12px 0',
+                borderBottom: isLast ? 'none' : '1px solid var(--color-glass-border)',
               }}
             >
               <div
@@ -161,7 +151,7 @@ export function TopMovers({ prices }: TopMoversProps) {
             </div>
           );
         })}
-      </div>
+      </Card>
     </div>
   );
 }
