@@ -122,7 +122,7 @@ class Ticker:
     Qualsevol codi que necessiti un ticker ha de referència aquesta classe.
     """
     MSCI_WORLD     = "IWDA.AS"
-    PHYSICAL_GOLD  = "4GLD.DE"
+    PHYSICAL_GOLD  = "PPFB.DE"
     MSCI_EUROPE    = "IMAE.AS"
     MSCI_EM_IMI    = "EMIM.AS"
     JAPAN          = "CSJP.AS"
