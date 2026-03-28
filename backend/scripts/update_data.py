@@ -16,7 +16,9 @@ El script és idempotent: es pot executar N vegades sense efectes secundaris.
 """
 
 import asyncio
+import contextlib
 import glob
+import io
 import os
 import sys
 from datetime import datetime, timezone
@@ -31,8 +33,19 @@ logging.disable(logging.WARNING)
 from core.db import AsyncSessionLocal
 from modules.market import service as market_service
 from modules.sync import service as sync_service
-from modules.market import service as market_service
-from modules.sync import service as sync_service
+
+
+@contextlib.contextmanager
+def _suppress_external_output():
+    """Redirigeix stdout/stderr durant crides a llibreries externes (yfinance, etc.)."""
+    sink = io.StringIO()
+    old_out, old_err = sys.stdout, sys.stderr
+    sys.stdout = sys.stderr = sink
+    try:
+        yield
+    finally:
+        sys.stdout = old_out
+        sys.stderr = old_err
 
 MW_ZIP_DIR = "/data/moneywiz"
 
@@ -46,7 +59,8 @@ async def update_market_prices(db) -> None:
     print("▶ Actualitzant preus de mercat (Yahoo Finance)...")
     t0 = datetime.now(timezone.utc)
     try:
-        result = await market_service.fill_all_gaps(db)
+        with _suppress_external_output():
+            result = await market_service.fill_all_gaps(db)
         print(f"  ✅ {result.rows_inserted} files inserides, "
               f"{len(result.assets_updated)} assets actualitzats  [{_fmt_duration(t0)}]")
     except Exception as exc:

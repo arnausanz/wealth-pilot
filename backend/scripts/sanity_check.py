@@ -143,6 +143,7 @@ async def run():
                 LIMIT 1
             ) ph ON TRUE
             WHERE a.is_active = TRUE
+              AND a.ticker_yf IS NOT NULL
             ORDER BY a.sort_order
         """))).fetchall()
 
@@ -152,8 +153,6 @@ async def run():
             for p in prices:
                 if p.price_close is None:
                     status = "⚠️  sense preu"
-                elif p.dies_old is None:
-                    status = "⚠️  sense data"
                 elif p.dies_old > 5:
                     status = f"🔴 {_days_label(p.dies_old)}"
                 elif p.dies_old > 2:
