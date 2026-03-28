@@ -2,7 +2,7 @@
 
 ## Visió general
 
-El mòdul `sync` importa backups de MoneyWiz a PostgreSQL. L'operació és **idempotent**: pujar el mateix ZIP N vegades produeix exactament el mateix estat a la BD.
+El mòdul `sync` importa backups de MoneyWiz a PostgreSQL seguint una estratègia de **mirror complet**: la BD és una còpia fidel del darrer backup. Cada upload aplica upserts de tot el contingut del ZIP i esborra el que ja no hi sigui. Pujar el mateix ZIP N vegades produeix exactament el mateix estat a la BD.
 
 ### Fitxers
 
@@ -107,7 +107,16 @@ POST /api/v1/sync/upload
          │
          ▼
 6. _upsert_transactions() [chunks de 500]
-   └── INSERT ... ON CONFLICT (uq_mw_transactions_mw_id) DO NOTHING
+   └── INSERT ... ON CONFLICT (uq_mw_transactions_mw_id) DO UPDATE
+       (reflecteix edicions de data, import, notes, categoria fetes a MoneyWiz)
+         │
+         ▼
+6b. _prune_removed(acc_ids, cat_ids, tx_ids)
+   ├── DELETE mw_transactions WHERE mw_internal_id NOT IN (tx_ids del ZIP)
+   ├── DELETE mw_categories WHERE mw_internal_id NOT IN (cat_ids del ZIP)
+   └── DELETE mw_accounts  WHERE mw_internal_id NOT IN (acc_ids del ZIP)
+   Ordre respecta FK constraints (tx → cat → acc).
+   Guard: si alguna llista és buida, no s'elimina res d'aquella taula.
          │
          ▼
 7. Actualitzar ImportBatch (status="completed", estadístiques) → COMMIT
@@ -123,15 +132,20 @@ Retorna ImportBatchOut
 
 ---
 
-## Idempotència
+## Estratègia Mirror
 
-| Entitat | Estratègia | Efecte en duplicat |
-|---------|-----------|-------------------|
-| `mw_accounts` | `ON CONFLICT DO UPDATE` | Actualitza balanç i flags |
-| `mw_categories` | `ON CONFLICT DO UPDATE` | Actualitza nom i tipus |
-| `mw_transactions` | `ON CONFLICT DO NOTHING` | S'ignora (immutable) |
+Cada upload garanteix que la BD és una còpia exacta del ZIP importat:
+
+| Operació | Entitat | Detall |
+|----------|---------|--------|
+| **UPSERT** | `mw_accounts` | `ON CONFLICT DO UPDATE` — balanç i flags |
+| **UPSERT** | `mw_categories` | `ON CONFLICT DO UPDATE` — nom i tipus |
+| **UPSERT** | `mw_transactions` | `ON CONFLICT DO UPDATE` — data, import, notes, categoria |
+| **DELETE** | tots | Registres de la BD no presents al ZIP (esborrats a MoneyWiz) |
 
 El camp `mw_internal_id` = `str(Z_PK)` del SQLite de MoneyWiz. Com que `Z_PK` és immutable a MoneyWiz, garanteix unicitat cross-uploads.
+
+**Implicació clau**: si l'usuari esborra una transacció a MoneyWiz i puja un nou backup, desapareixerà de la BD al proper upload. Si n'edita una (import, data, categoria), es reflectirà.
 
 ---
 
@@ -156,9 +170,9 @@ Puja un ZIP de backup de MoneyWiz i l'importa.
   "filename": "iMoneyWiz-iCloud-Backup-2026_03_26.zip",
   "file_size_bytes": 38622464,
   "status": "completed",
-  "records_found": 1129,
-  "records_imported": 1087,
-  "records_skipped": 42,
+  "records_found": 1524,
+  "records_imported": 1524,
+  "records_skipped": 0,
   "records_failed": 0,
   "mw_date_from": "2021-09-01",
   "mw_date_to": "2026-03-26",
@@ -211,9 +225,9 @@ Registre de cada importació. Sempre es crea, fins i tot si falla.
 | `filename` | varchar(255) | Nom del fitxer original |
 | `file_size_bytes` | int | |
 | `status` | varchar(20) | `pending`, `processing`, `completed`, `failed`, `partial` |
-| `records_found` | int | Total a la BD MoneyWiz |
-| `records_imported` | int | Nous inserts |
-| `records_skipped` | int | Duplicats (DO NOTHING) |
+| `records_found` | int | Total al ZIP (acc + cat + tx) |
+| `records_imported` | int | Registres upserted (nous o actualitzats) |
+| `records_skipped` | int | Registres eliminats del mirror (prune) |
 | `mw_date_from` | date | Primera data de transacció al backup |
 | `mw_date_to` | date | Última data de transacció al backup |
 | `error_log` | text | Detall de l'error (si status=failed) |
@@ -244,7 +258,7 @@ Categories jeràrquiques de MoneyWiz (despeses/ingressos).
 | `category_type` | varchar(20) | `expense` (ZTYPE2=1), `income` (ZTYPE2=2) |
 
 ### `mw_transactions`
-Totes les transaccions financeres (immutables post-import).
+Totes les transaccions financeres. Actualitzables via upload (mirror).
 
 | Columna | Tipus | Notes |
 |---------|-------|-------|
@@ -291,8 +305,18 @@ Totes les transaccions financeres (immutables post-import).
 - `POST /upload` rebutja: extensió incorrecta, fitxer buit, ZIP invàlid
 - Upload amb ZIP sintètic: 200, batch creat, comptes/categories/transaccions importats
 - **Idempotència**: dos uploads del mateix ZIP → mateixa quantitat de transaccions
-- Segon upload reporta `records_skipped > 0`
+- Segon upload del mateix ZIP reporta `records_skipped = 0` (res a eliminar)
 - Batch apareix a la llista de `/batches`
+
+---
+
+## Decisió de disseny: mirror vs append-only
+
+L'estratègia inicial era *append-only*: `ON CONFLICT DO NOTHING` per a transaccions, sense esborrats. Rebutjada perquè:
+- Si l'usuari esborra una transacció a MoneyWiz, la BD quedaria desfasada per sempre.
+- Si edita (import, categoria, data), els canvis no es propagarien.
+
+L'estratègia **mirror complet** garanteix que la BD = darrer backup. El cost és una operació `DELETE ... NOT IN (...)` per taula en cada import, acceptable per al volum típic de MoneyWiz (~1.500–5.000 transaccions).
 
 ---
 
@@ -303,6 +327,17 @@ El parsing del SQLite (sqlite3) és **síncron**. Per no bloquejar el loop d'asy
 ## Decisió de disseny: imports positius
 
 Els imports a `mw_transactions.amount` sempre s'emmagatzemen positius. La direcció del flux de diners és implícita en `tx_type` (`expense`, `income`, etc.). Això simplifica les agregacions i evita errors de signe en els dashboards.
+
+## Scripts de manteniment
+
+| Script | Comanda | Descripció |
+|--------|---------|------------|
+| `scripts/update_data.py` | `make update-data` | Refresh de preus (Yahoo Finance) + mirror del ZIP més recent de `data/moneywiz/` |
+| `scripts/sanity_check.py` | `make sanity` | Informe de salut: darrer sync, transaccions, preus per asset |
+
+`make update-data` detecta automàticament el ZIP més recent per data de modificació a `data/moneywiz/`. Útil per a updates manuals fins que l'iOS Shortcut estigui implementat.
+
+---
 
 ## Tasques futures
 
