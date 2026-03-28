@@ -58,6 +58,7 @@ Prioritats identificades durant el test mòbil:
 - [ ] Charts d'analytics (despeses, flux caixa): millorar estètica, llegibilitat en pantalla petita
 - [ ] Net worth evolution: anotacions d'events importants sobre la línia
 - [ ] Consistència visual entre tots els gràfics (paleta, tipografia, espais)
+- [ ] **Tooltip al gràfic de la home**: mantenir premut → quadre flotant amb net worth i rendiment a aquella data (estil Trade Republic). Implementar amb `onTouchStart`/`onTouchMove` sobre el SVG, calculant la posició X relativa i interpolant el snapshot més proper.
 
 ### 8.2 Simulació
 - [ ] Simplificar el flow: slider + resultats en un sol scroll, sense tabs

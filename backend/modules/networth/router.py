@@ -114,3 +114,22 @@ async def get_history(
         change_eur_period=change_eur,
         change_pct_period=change_pct,
     )
+
+
+@router.post("/backfill", status_code=200)
+async def backfill_history(
+    months: int = Query(default=24, ge=1, le=60, description="Mesos a regenerar (default: 24)"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Genera snapshots mensuals retrospectius per omplir el gràfic d'historial.
+    Útil després d'una importació inicial de MoneyWiz.
+    Idempotent — segur de cridar múltiples vegades.
+    """
+    result = await service.backfill_snapshots(db, months=months)
+    return {
+        "ok": True,
+        "snapshots_created": result["created"],
+        "errors": result["errors"],
+        "dates": result["dates"],
+    }

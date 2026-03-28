@@ -572,6 +572,8 @@ async def process_upload(
         # Trigger automàtic: generar snapshot de net worth per avui
         try:
             snap = await networth_service.generate_snapshot(db, trigger_source="sync")
+            # Genera snapshots mensuals retrospectius per al gràfic d'historial
+            await networth_service.backfill_snapshots(db, months=24)
             logger.info(
                 "Snapshot net worth generat post-sync: %.2f EUR",
                 snap.total_net_worth,

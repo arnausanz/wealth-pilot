@@ -121,6 +121,7 @@ async def generate_snapshot(
         ) ph ON TRUE
         WHERE mt.tx_type IN ('investment_buy', 'investment_sell')
           AND mt.shares IS NOT NULL
+          AND mt.tx_date <= :snap_date
           AND a.is_active = TRUE
         GROUP BY a.id, a.display_name, a.ticker_yf, ph.price_close, ph.currency
         HAVING SUM(
@@ -276,3 +277,58 @@ async def get_history(
         .order_by(NetWorthSnapshot.snapshot_date.asc())
     )
     return list(result.scalars().all())
+
+
+async def backfill_snapshots(
+    db: AsyncSession,
+    months: int = 24,
+) -> dict:
+    """
+    Genera snapshots mensuals retrospectius des de fa `months` mesos fins a ahir.
+    Utilitza el primer dia de cada mes. Idempotent: ON CONFLICT DO UPDATE.
+
+    Retorna un resum amb el nombre de snapshots creats i errors.
+    """
+    from calendar import monthrange
+
+    today = date.today()
+    results = {"created": 0, "errors": 0, "dates": []}
+
+    for i in range(months, 0, -1):
+        # Calcular el primer dia del mes d'i mesos enrere
+        year = today.year
+        month = today.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        # Usar el darrer dia del mes per tenir la posició final del mes
+        last_day = monthrange(year, month)[1]
+        snap_date = date(year, month, last_day)
+
+        # No generar snapshots futurs
+        if snap_date >= today:
+            continue
+
+        try:
+            await generate_snapshot(db, snapshot_date=snap_date, trigger_source="backfill")
+            results["created"] += 1
+            results["dates"].append(snap_date.isoformat())
+            logger.info("Backfill snapshot creat: %s", snap_date)
+        except Exception as exc:
+            results["errors"] += 1
+            logger.warning("Backfill snapshot fallat per %s: %s", snap_date, exc)
+
+    # Generar també el d'avui
+    try:
+        await generate_snapshot(db, snapshot_date=today, trigger_source="backfill")
+        results["created"] += 1
+        results["dates"].append(today.isoformat())
+    except Exception as exc:
+        results["errors"] += 1
+        logger.warning("Backfill snapshot d'avui fallat: %s", exc)
+
+    logger.info(
+        "Backfill completat: %d snapshots creats, %d errors",
+        results["created"], results["errors"],
+    )
+    return results

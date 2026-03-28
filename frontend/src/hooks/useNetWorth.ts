@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from '../core/api';
 import type { NetWorthHistoryResponse } from '../types';
 
@@ -18,5 +18,6 @@ export function useNetWorthHistory(period: string) {
     queryKey: ['networth', 'history', apiPeriod],
     queryFn: () => api.get<NetWorthHistoryResponse>(`/api/v1/networth/history?period=${apiPeriod}`),
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 }

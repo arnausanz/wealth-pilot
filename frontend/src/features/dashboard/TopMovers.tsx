@@ -10,8 +10,7 @@ export function TopMovers({ prices }: TopMoversProps) {
   const topMovers = useMemo(() => {
     return [...prices]
       .filter((p) => p.price_close != null)
-      .sort((a, b) => Math.abs(n(b.change_pct_1d)) - Math.abs(n(a.change_pct_1d)))
-      .slice(0, 4);
+      .sort((a, b) => Math.abs(n(b.change_pct_1d)) - Math.abs(n(a.change_pct_1d)));
   }, [prices]);
 
   if (topMovers.length === 0) {

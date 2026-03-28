@@ -38,6 +38,7 @@ echo "   ✓ Build copiat a $DIST"
 # 4. Migracions BD
 echo "→ [4/5] Migracions..."
 cd "$APP_DIR/backend"
+set -a && source /opt/wealthpilot/.env.prod && set +a
 "$VENV/bin/alembic" upgrade head
 
 # 5. Restart backend
