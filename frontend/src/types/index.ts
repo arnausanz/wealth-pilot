@@ -82,3 +82,36 @@ export const ASSET_COLORS: Record<string, string> = {
 };
 
 export const ASSET_COLOR_DEFAULT = '#64748B';
+
+// ─── Portfolio / Rebalanceig ─────────────────────────────────────────────────
+
+export interface RebalanceSuggestion {
+  asset_id: number;
+  display_name: string;
+  ticker_yf: string | null;
+  color_hex: string | null;
+  value_eur: string | number;
+  weight_actual_pct: string | number;
+  target_weight_pct: string | number | null;
+  weight_diff_pct: string | number | null;
+  direction: 'overweight' | 'underweight' | 'missing' | 'on_track';
+  action_eur: string | number | null;
+}
+
+export interface RebalanceResponse {
+  snapshot_date: string;
+  total_investment_eur: string | number;
+  total_target_pct: string | number | null;
+  suggestions: RebalanceSuggestion[];
+}
+
+export interface PortfolioSummaryResponse {
+  snapshot_date: string;
+  total_net_worth: string | number;
+  investment_portfolio_value: string | number;
+  cash_and_bank_value: string | number;
+  change_eur: string | number | null;
+  change_pct: string | number | null;
+  on_track: boolean | null;
+  on_track_detail: string | null;
+}

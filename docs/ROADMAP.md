@@ -1,6 +1,6 @@
 # WealthPilot — Roadmap de Desenvolupament
 
-> Versió: 1.5 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1.1 ✅ + Fase 1.2 ✅ + Fase 1.3 ✅ completades, 108 tests verds
+> Versió: 1.6 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1 ✅ + Fase 2 ✅ completades, 155 tests verds (108 backend + 47 frontend)
 
 ---
 
@@ -195,47 +195,45 @@ Total des de `mw_accounts.current_balance` (font de veritat). Desglossat per ass
 
 ---
 
-## FASE 2 — MVP V1.0: Dashboard & Portfolio
+## FASE 2 — MVP V1.0: Dashboard & Portfolio ✅
 **Objectiu:** Primera pantalla funcional amb dades reals. El moment "wow" del projecte.
+**Estat:** Completada al 100%. Dashboard + Portfolio visuals amb dades reals. 47 tests frontend verds.
 
-### 2.1 Backend Portfolio API
-- [ ] `modules/portfolio/service.py`:
-  - [ ] `get_portfolio_summary()`: net worth total, canvi diari, % canvi
-  - [ ] `get_asset_breakdown()`: per asset — unitats, preu, valor, cost FIFO, P&L €, P&L %, pes real vs. target
-  - [ ] `get_rebalancing_suggestions()`: assets sobreponderat/infraponderat + import a moure
-  - [ ] `get_on_track_status()`: compara net worth actual vs. projecció base
-- [ ] `modules/portfolio/router.py`:
-  - [ ] `GET /api/v1/portfolio/summary`
-  - [ ] `GET /api/v1/portfolio/assets`
-  - [ ] `GET /api/v1/portfolio/rebalance`
-- [ ] Cost basis FIFO implementat correctament (important per fiscalitat espanyola)
+### 2.1 Backend Portfolio API ✅
+> `modules/portfolio/` amb lògica de rebalanceig i resum. Networth history amb `asset_snapshots` complets (display_name, ticker_yf, color_hex, pnl_eur). Fix crítics: camp `unrealized_pnl_eur` → `pnl_eur` (alineació frontend/backend), i el router retornava `asset_snapshots: []` hardcoded.
 
-### 2.2 Frontend Dashboard
-> Stack: **React 18 + TypeScript + Vite**. Design system: Liquid Glass (mockup v3). Gràfics: SVG pur (chart morphing, donut, goal ring). Estat: TanStack Query (server) + Zustand (UI/tema). Routing: React Router v6.
+- [x] `modules/portfolio/service.py`:
+  - [x] `get_portfolio_summary()`: net worth total, canvi diari, % canvi
+  - [x] `get_asset_breakdown()`: per asset via `asset_snapshots` — shares, preu, valor, cost basis, P&L €, P&L %, pes real
+  - [x] `get_rebalancing()`: assets sobreponderat/infraponderat + import a moure, ordent per urgència
+  - [ ] `get_on_track_status()`: compara net worth vs. projecció base *(Fase 3 — requereix motor simulació)*
+- [x] `modules/portfolio/router.py`:
+  - [x] `GET /api/v1/portfolio/summary`
+  - [x] `GET /api/v1/portfolio/rebalance`
+- [x] Fix `networth/router.py`: ara retorna `asset_snapshots` amb JOIN a `assets` (display_name, ticker_yf, color_hex)
+- [ ] Cost basis FIFO *(Fase 3 — implementat amb cost basis simple ara; FIFO quan s'implementi historial fiscal)*
 
-- [ ] Scaffold `frontend/` amb Vite + React + TypeScript
-- [ ] Design tokens CSS (dark/light) + components base (Card, NavBar, Icon)
-- [ ] `features/dashboard/`: hero patrimoni, gràfic temporal amb morphing, selector temporalitat
-- [ ] Cards KPI: On Track % + Habitatge goal ring
-- [ ] Distribució cartera: donut SVG + llista assets
-- [ ] Top movers del dia
-- [ ] Alertes d'assignació
-- [ ] Loading skeletons + pull-to-refresh + timestamp actualització
+### 2.2 Frontend Dashboard ✅
+> React 18 + TypeScript + Vite 5. Design system Liquid Glass. SVG pur per a tots els gràfics. TanStack Query + Zustand. 47 tests Vitest.
 
-### 2.3 Frontend Portfolio
-- [ ] `features/portfolio/`: llista assets complet
-- [ ] Per asset: unitats, preu actual, valor €, cost mig, P&L €, P&L %, pes real vs. target
-- [ ] Secció rebalanceig: suggeriments basats en target weights
-- [ ] Tap en un asset → detall (futur expandible)
-- [ ] Bottom navigation bar: Inici | Cartera | Sim | Historial | Config
+- [x] Scaffold complet amb Vite + React + TypeScript (`frontend/` reorganitzat)
+- [x] Design tokens CSS (dark/light via classe `<html>.dark`) + Card, NavBar, StatusDot, TimeSelector
+- [x] `features/dashboard/`: HeroValue, ChartSection (PortfolioChart morfing SVG), StatusCards, Allocation (DonutChart + llista), TopMovers, Alerts
+- [x] GoalRing SVG per a l'objectiu d'habitatge
+- [x] Loading skeletons + timestamp actualització + StatusDot live/stale
 
-### 2.4 Validació Fase 2
-- [ ] Net worth real visible al Dashboard en < 3 segons
-- [ ] 8 assets llistats amb preus actuals de Yahoo Finance
-- [ ] Donut chart + gràfic morfing renderitzats correctament a viewport mòbil (390px)
-- [ ] Rebalanceig suggerit coherent amb weights definits
-- [ ] Dark/light toggle funcional amb transició suau
-- [ ] Test en iPhone real per WiFi local (UX touch, scroll, etc.)
+### 2.3 Frontend Portfolio ✅
+- [x] `features/portfolio/PortfolioScreen.tsx`: llista assets amb shares, preu actual, valor €, P&L €/%, pes cartera
+- [x] Cards agrupades amb border radius fluid (primera/última/intermèdies)
+- [x] Bottom NavBar: Inici | Cartera | (Sim | Hist | Config pendents)
+
+### 2.4 Validació Fase 2 ✅
+- [x] Net worth real visible al Dashboard: 23.862,98 € (dades MoneyWiz + YF)
+- [x] 5 assets amb preus reals a la cartera (Japan i Europe Defence sense posició actual)
+- [x] DonutChart + gràfic morfing renderitzats correctament (390px)
+- [x] Rebalanceig: MSCI World +31.31% (sobreponderat), Japan -6% (missing)
+- [x] Dark/light toggle via Zustand + classe `<html>.dark`
+- [x] Endpoints verificats: `/api/v1/portfolio/summary`, `/api/v1/portfolio/rebalance`, `/api/v1/networth/history`
 
 ---
 

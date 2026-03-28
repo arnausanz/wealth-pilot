@@ -14,12 +14,13 @@ class AssetSnapshotOut(BaseModel):
     asset_id: int
     display_name: str
     ticker_yf: Optional[str]
+    color_hex: Optional[str] = None
     shares: Decimal
     price_eur: Decimal
     value_eur: Decimal
     cost_basis_eur: Decimal
-    unrealized_pnl_eur: Decimal
-    unrealized_pnl_pct: Optional[Decimal]
+    pnl_eur: Decimal
+    pnl_pct: Optional[Decimal]
     weight_actual_pct: Optional[Decimal]
 
 
