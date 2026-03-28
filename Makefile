@@ -1,4 +1,4 @@
-.PHONY: dev dev-bg down build rebuild build-frontend logs ps db-shell migrate migration seed test check-prices sanity update-data net-worth clean clean-all
+.PHONY: dev dev-bg down build rebuild build-frontend logs logs-fe ps db-shell migrate migration seed test test-fe check-fe shell-fe check-prices sanity update-data net-worth clean clean-all
 
 # ─── Development ──────────────────────────────────────────────────────────────
 # Frontend runs at http://localhost:8080 (Vite dev server with hot reload)
@@ -73,6 +73,20 @@ net-worth:
 
 test:
 	@bash tests/run_tests.sh
+
+test-fe:
+	docker compose exec frontend npm test
+
+check-fe:
+	docker compose exec frontend npm run typecheck
+
+# ─── Frontend ─────────────────────────────────────────────────────────────────
+
+logs-fe:
+	docker compose logs -f frontend
+
+shell-fe:
+	docker compose exec frontend sh
 
 # ─── Cleanup ──────────────────────────────────────────────────────────────────
 

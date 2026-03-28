@@ -1,5 +1,9 @@
 # Frontend Core — SPA Vanilla JS + PWA
 
+> ⚠️ **OBSOLET** — Aquest document descriu l'arquitectura Vanilla JS original (prototip).
+> La implementació actual utilitza **React 18 + TypeScript + Vite**.
+> Consulta [`10-frontend-react.md`](./10-frontend-react.md) per a la documentació vigent.
+
 > Última actualització: Març 2026
 
 ---
