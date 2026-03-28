@@ -1,6 +1,6 @@
 # WealthPilot — Roadmap de Desenvolupament
 
-> Versió: 1.4 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1.1 ✅ + Fase 1.2 ✅ completades, 87 tests verds
+> Versió: 1.5 | Data: Març 2026 | Estat: En curs — Fase 0 ✅ + Fase 1.1 ✅ + Fase 1.2 ✅ + Fase 1.3 ✅ completades, 108 tests verds
 
 ---
 
@@ -211,28 +211,30 @@ Total des de `mw_accounts.current_balance` (font de veritat). Desglossat per ass
 - [ ] Cost basis FIFO implementat correctament (important per fiscalitat espanyola)
 
 ### 2.2 Frontend Dashboard
-- [ ] `modules/dashboard/index.js` + `dashboard.html` (injectat via router)
-- [ ] Card "Net Worth Total" amb preu en temps real i variació diària
-- [ ] Indicador "On Track" (verd/groc/vermell) amb text explicatiu
-- [ ] Barra de progrés "Home Purchase Goal"
-- [ ] Secció d'alertes actives (desviació > 5% target, etc.)
-- [ ] Pull-to-refresh (o botó de refresh) que crida l'API
-- [ ] Loading skeletons mentre carreguen les dades
-- [ ] Timestamp "Actualitzat fa X minuts"
+> Stack: **React 18 + TypeScript + Vite**. Design system: Liquid Glass (mockup v3). Gràfics: SVG pur (chart morphing, donut, goal ring). Estat: TanStack Query (server) + Zustand (UI/tema). Routing: React Router v6.
+
+- [ ] Scaffold `frontend/` amb Vite + React + TypeScript
+- [ ] Design tokens CSS (dark/light) + components base (Card, NavBar, Icon)
+- [ ] `features/dashboard/`: hero patrimoni, gràfic temporal amb morphing, selector temporalitat
+- [ ] Cards KPI: On Track % + Habitatge goal ring
+- [ ] Distribució cartera: donut SVG + llista assets
+- [ ] Top movers del dia
+- [ ] Alertes d'assignació
+- [ ] Loading skeletons + pull-to-refresh + timestamp actualització
 
 ### 2.3 Frontend Portfolio
-- [ ] `modules/portfolio/index.js` + `portfolio.html`
-- [ ] Donut chart (Chart.js): distribució real vs. target, visualment clara
-- [ ] Llista d'assets: nom, valor €, P&L €, P&L %, pes actual/target, badge sobreponderat/infraponderat
-- [ ] Secció rebalanceig: quins assets ajustar i per quant
+- [ ] `features/portfolio/`: llista assets complet
+- [ ] Per asset: unitats, preu actual, valor €, cost mig, P&L €, P&L %, pes real vs. target
+- [ ] Secció rebalanceig: suggeriments basats en target weights
 - [ ] Tap en un asset → detall (futur expandible)
-- [ ] Bottom navigation bar: Dashboard | Portfolio | Simulació | Historial | Config
+- [ ] Bottom navigation bar: Inici | Cartera | Sim | Historial | Config
 
 ### 2.4 Validació Fase 2
 - [ ] Net worth real visible al Dashboard en < 3 segons
 - [ ] 8 assets llistats amb preus actuals de Yahoo Finance
-- [ ] Donut chart renderitzat correctament en viewport mòbil (390px)
+- [ ] Donut chart + gràfic morfing renderitzats correctament a viewport mòbil (390px)
 - [ ] Rebalanceig suggerit coherent amb weights definits
+- [ ] Dark/light toggle funcional amb transició suau
 - [ ] Test en iPhone real per WiFi local (UX touch, scroll, etc.)
 
 ---

@@ -143,7 +143,9 @@ Això retorna les 2 darreres files per asset (per calcular el `change_pct_1d`) s
 
 ## Descàrrega via yfinance
 
-S'usa la llibreria `yfinance==0.2.44` (sync), cridada via `asyncio.to_thread()` per no bloquejar l'event loop.
+S'usa la llibreria `yfinance==1.2.0` (sync), cridada via `asyncio.to_thread()` per no bloquejar l'event loop.
+
+> **Nota de versió:** yfinance >= 1.0 **sempre** retorna MultiIndex columns `(Price, Ticker)` fins i tot per descàrregues d'un sol ticker. `_extract_ohlcv_single` detecta MultiIndex primer i delega a `_extract_ohlcv_multi`.
 
 ### Batch vs Single
 
@@ -155,14 +157,14 @@ df = yf.download(["IWDA.AS", "BTC-EUR"], start="2020-01-01", end="2026-03-28",
 
 # Single (fallback si batch falla): amb retry exponential
 df = yf.download("IWDA.AS", start="...", end="...", auto_adjust=True, progress=False)
-# → DataFrame amb flat columns: ['Close', 'Open', 'High', 'Low', 'Volume']
+# → yfinance 1.x: MultiIndex columns: ('Close', 'IWDA.AS'), ('Open', 'IWDA.AS'), ...
 ```
 
 `auto_adjust=True` ajusta els preus per splits i dividends automàticament.
 
 ### Gestió del MultiIndex
 
-yfinance pot retornar DataFrames amb columnes MultiIndex (multi-ticker) o flat (single-ticker), i el format pot variar entre versions. El servei gestiona tots dos casos a `_extract_ohlcv_single` i `_extract_ohlcv_multi`.
+yfinance >= 1.0 retorna **sempre** MultiIndex `(Price, Ticker)` per a tots els casos. El servei gestiona tant el format nou (`_extract_ohlcv_single` → `_extract_ohlcv_multi`) com el format pla legacy (versió < 1.0).
 
 ---
 
