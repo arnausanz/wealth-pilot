@@ -1,6 +1,8 @@
-.PHONY: dev dev-bg down build rebuild logs ps db-shell migrate migration seed test check-prices sanity update-data net-worth clean clean-all
+.PHONY: dev dev-bg down build rebuild build-frontend logs ps db-shell migrate migration seed test check-prices sanity update-data net-worth clean clean-all
 
 # ─── Development ──────────────────────────────────────────────────────────────
+# Frontend runs at http://localhost:8080 (Vite dev server with hot reload)
+# Backend API at http://localhost:8000
 
 dev:
 	docker compose up
@@ -13,6 +15,9 @@ down:
 
 build:
 	docker compose build
+
+build-frontend:
+	docker compose build frontend
 
 rebuild:
 	docker compose build --no-cache
