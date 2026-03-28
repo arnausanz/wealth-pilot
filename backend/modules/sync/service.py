@@ -5,8 +5,23 @@ Flux principal:
   1. Rep els bytes d'un ZIP de backup de MoneyWiz.
   2. Extreu el fitxer SQLite (+ WAL/SHM) a un directori temporal.
   3. Parseja comptes, categories i transaccions des del SQLite de Core Data.
-  4. Fa upsert a PostgreSQL (idempotent: pujar el mateix ZIP 2 vegades = 0 duplicats).
+  4. Fa mirror complet a PostgreSQL: upsert de tot el ZIP + eliminació del que ja no hi és.
   5. Retorna un ImportBatch amb les estadístiques de la importació.
+
+Estratègia de sincronització — MIRROR COMPLET:
+  La BD és una còpia fidel de MoneyWiz. Cada import:
+  - UPSERT comptes i categories (ON CONFLICT DO UPDATE).
+  - UPSERT transaccions (ON CONFLICT DO UPDATE): reflecteix edicions de data, import,
+    notes o categoria que l'usuari hagi fet a MoneyWiz.
+  - PRUNE: elimina de la BD els registres que ja no existeixen al backup (l'usuari
+    els ha esborrat a MoneyWiz). Ordre: tx → categories → comptes (respecta FKs).
+
+  Resultat: pujar el mateix ZIP N vegades sempre produeix el mateix estat a la BD.
+
+Estadístiques del ImportBatch:
+  - records_found:    total de registres al ZIP.
+  - records_imported: registres upserted (nous o actualitzats).
+  - records_skipped:  registres eliminats de la BD (ja no existeixen a MW).
 
 Format intern de MoneyWiz (Core Data):
   - Una sola taula ZSYNCOBJECT conté totes les entitats.
@@ -25,7 +40,7 @@ import zipfile
 from datetime import datetime, timedelta, date, timezone
 from pathlib import Path
 
-from sqlalchemy import select, text
+from sqlalchemy import delete as sa_delete, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -332,14 +347,15 @@ async def _upsert_transactions(
     batch_id: int,
     acc_map: dict[str, int],
     cat_map: dict[str, int],
-) -> tuple[int, int]:
+) -> int:
     """
-    Insert de transaccions en blocs de _CHUNK_SIZE.
-    ON CONFLICT (mw_internal_id) DO NOTHING — les transaccions són immutables.
-    Retorna (n_inserted, n_skipped).
+    Upsert de transaccions en blocs de _CHUNK_SIZE.
+    ON CONFLICT DO UPDATE: reflecteix edicions fetes a MoneyWiz (data, import, notes,
+    categoria). El import_batch_id es conserva del primer import (traçabilitat).
+    Retorna el nombre de files processades.
     """
     if not transactions:
-        return 0, 0
+        return 0
 
     rows = [
         {
@@ -358,17 +374,82 @@ async def _upsert_transactions(
         for t in transactions
     ]
 
-    inserted = 0
+    processed = 0
     for chunk in _chunks(rows, _CHUNK_SIZE):
         stmt = pg_insert(MWTransaction).values(chunk)
-        stmt = stmt.on_conflict_do_nothing(
-            constraint="uq_mw_transactions_mw_id"
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_mw_transactions_mw_id",
+            set_={
+                "account_id": stmt.excluded.account_id,
+                "category_id": stmt.excluded.category_id,
+                "tx_date": stmt.excluded.tx_date,
+                "amount": stmt.excluded.amount,
+                "currency": stmt.excluded.currency,
+                "amount_eur": stmt.excluded.amount_eur,
+                "notes": stmt.excluded.notes,
+                "is_reconciled": stmt.excluded.is_reconciled,
+                # import_batch_id: mantenim el del primer import per traçabilitat
+            },
         ).returning(MWTransaction.id)
         result = await db.execute(stmt)
-        inserted += len(result.fetchall())
+        processed += len(result.fetchall())
 
-    skipped = len(transactions) - inserted
-    return inserted, skipped
+    return processed
+
+
+async def _prune_removed(
+    db: AsyncSession,
+    acc_ids: list[str],
+    cat_ids: list[str],
+    tx_ids: list[str],
+) -> int:
+    """
+    Elimina de la BD els registres que ja no existeixen al backup de MoneyWiz.
+    Garanteix que la BD és un mirror exacte del darrer ZIP importat.
+
+    Ordre d'eliminació respecta les FK constraints:
+      1. Transaccions (referencien comptes i categories)
+      2. Categories (jerarquia self-referent; ON DELETE SET NULL per a parent_id)
+      3. Comptes
+
+    Guard: si qualsevol llista és buida, no s'elimina res d'aquella taula (evita
+    esborrar tot si el ZIP és parcialment corrupte).
+
+    Retorna el total de registres eliminats.
+    """
+    deleted = 0
+
+    if tx_ids:
+        r = await db.execute(
+            sa_delete(MWTransaction).where(
+                MWTransaction.mw_internal_id.notin_(tx_ids)
+            )
+        )
+        deleted += r.rowcount
+        if r.rowcount:
+            logger.info("Prune: eliminades %d transaccions obsoletes", r.rowcount)
+
+    if cat_ids:
+        r = await db.execute(
+            sa_delete(MWCategory).where(
+                MWCategory.mw_internal_id.notin_(cat_ids)
+            )
+        )
+        deleted += r.rowcount
+        if r.rowcount:
+            logger.info("Prune: eliminades %d categories obsoletes", r.rowcount)
+
+    if acc_ids:
+        r = await db.execute(
+            sa_delete(MWAccount).where(
+                MWAccount.mw_internal_id.notin_(acc_ids)
+            )
+        )
+        deleted += r.rowcount
+        if r.rowcount:
+            logger.info("Prune: eliminats %d comptes obsolets", r.rowcount)
+
+    return deleted
 
 
 # ─── API pública ──────────────────────────────────────────────────────────────
@@ -380,13 +461,18 @@ async def process_upload(
     trigger_source: str = "api",
 ) -> ImportBatch:
     """
-    Processa un backup de MoneyWiz (ZIP) i importa les dades a PostgreSQL.
+    Processa un backup de MoneyWiz (ZIP) i fa un mirror complet a PostgreSQL.
 
     Garanties:
-    - Idempotent: pujar el mateix backup N vegades no genera duplicats.
-    - Atòmic per dades: si l'import falla, es fa rollback de tots els upserts.
-    - El registre ImportBatch sempre es crea (amb status='failed' si hi ha error).
+    - Mirror exacte: la BD reflecteix el contingut del ZIP (inclòs esborrats a MW).
+    - Atòmic per dades: si l'import falla, es fa rollback de tots els canvis.
+    - El registre ImportBatch sempre es crea (status='failed' si hi ha error).
     - El ZIP es processa en memòria i es neteja en finalitzar.
+
+    Estadístiques retornades:
+    - records_found:    total de registres al ZIP.
+    - records_imported: registres upserted (nous o actualitzats).
+    - records_skipped:  registres eliminats de la BD (ja no existeixen a MW).
     """
     now = datetime.now(timezone.utc)
 
@@ -414,35 +500,41 @@ async def process_upload(
             n_accounts, n_categories, n_transactions,
         )
 
-        # Transacció 2: upsert de totes les dades
+        # Transacció 2: upsert + prune (mirror complet)
         acc_n, acc_map = await _upsert_accounts(db, data["accounts"])
         cat_n, cat_map = await _upsert_categories(db, data["categories"])
-        tx_n, tx_skip = await _upsert_transactions(
+        tx_n = await _upsert_transactions(
             db, data["transactions"], batch.id, acc_map, cat_map
         )
+
+        # Prune: elimina registres que ja no existeixen al backup
+        acc_ids = [a["mw_internal_id"] for a in data["accounts"]]
+        cat_ids = [c["mw_internal_id"] for c in data["categories"]]
+        tx_ids  = [t["mw_internal_id"] for t in data["transactions"]]
+        deleted = await _prune_removed(db, acc_ids, cat_ids, tx_ids)
 
         # Rang de dates de les transaccions
         dates = [t["tx_date"] for t in data["transactions"]]
         date_from = min(dates) if dates else None
-        date_to = max(dates) if dates else None
+        date_to   = max(dates) if dates else None
 
-        records_found = n_accounts + n_categories + n_transactions
+        records_found    = n_accounts + n_categories + n_transactions
         records_imported = acc_n + cat_n + tx_n
 
-        batch.status = "completed"
-        batch.records_found = records_found
+        batch.status           = "completed"
+        batch.records_found    = records_found
         batch.records_imported = records_imported
-        batch.records_skipped = records_found - records_imported
-        batch.mw_date_from = date_from
-        batch.mw_date_to = date_to
-        batch.completed_at = datetime.now(timezone.utc)
+        batch.records_skipped  = deleted  # registres eliminats del mirror
+        batch.mw_date_from     = date_from
+        batch.mw_date_to       = date_to
+        batch.completed_at     = datetime.now(timezone.utc)
 
         await db.commit()
 
         logger.info(
             "Sync completat [batch=%d]: %d comptes, %d categories, "
-            "%d transaccions noves (%d ignorades per duplicades)",
-            batch.id, acc_n, cat_n, tx_n, tx_skip,
+            "%d transaccions upserted, %d registres eliminats (prune)",
+            batch.id, acc_n, cat_n, tx_n, deleted,
         )
 
     except Exception as exc:

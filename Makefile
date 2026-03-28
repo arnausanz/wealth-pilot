@@ -1,4 +1,4 @@
-.PHONY: dev dev-bg down build rebuild logs ps db-shell migrate migration seed test check-prices clean clean-all
+.PHONY: dev dev-bg down build rebuild logs ps db-shell migrate migration seed test check-prices sanity update-data clean clean-all
 
 # ─── Development ──────────────────────────────────────────────────────────────
 
@@ -52,6 +52,14 @@ LEFT JOIN LATERAL ( \
 ) ph ON TRUE \
 WHERE a.is_active = TRUE \
 ORDER BY a.sort_order;"'
+
+# ─── Dades ────────────────────────────────────────────────────────────────────
+
+sanity:
+	docker compose exec backend python scripts/sanity_check.py
+
+update-data:
+	docker compose exec backend python scripts/update_data.py
 
 # ─── Tests ────────────────────────────────────────────────────────────────────
 

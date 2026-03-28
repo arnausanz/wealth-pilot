@@ -466,8 +466,11 @@ class TestSyncEndpoints:
         )
 
     @pytest.mark.asyncio
-    async def test_upload_second_call_shows_skipped(self, http_client):
-        """El segon upload del mateix ZIP ha de reportar records_skipped > 0."""
+    async def test_upload_second_call_no_deletions_for_identical_zip(self, http_client):
+        """
+        El segon upload del MATEIX ZIP no ha d'eliminar res (mirror idèntic):
+        records_skipped == 0 perquè no hi ha registres obsolets.
+        """
         zip_bytes = _build_moneywiz_zip()
         await http_client.post(
             "/api/v1/sync/upload",
@@ -478,7 +481,8 @@ class TestSyncEndpoints:
             files={"file": ("MoneyWiz_test.zip", zip_bytes, "application/zip")},
         )
         body = resp2.json()
-        assert body["records_skipped"] > 0
+        # Mirror idèntic: res s'elimina, tot s'actualitza (DO UPDATE)
+        assert body["records_skipped"] == 0
 
     @pytest.mark.asyncio
     async def test_batches_list_contains_upload(self, http_client):

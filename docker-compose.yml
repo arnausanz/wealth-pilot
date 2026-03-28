@@ -25,6 +25,7 @@ services:
     env_file: .env
     volumes:
       - ./backend:/app
+      - ./data:/data:ro   # accés als ZIPs de MoneyWiz des dels scripts
     ports:
       - "8000:8000"
     depends_on:
