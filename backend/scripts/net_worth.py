@@ -88,27 +88,30 @@ async def run():
             print("  (cap compte)")
         else:
             for a in accounts:
-                if not a.include_in_networth:
-                    continue
                 bal = Decimal(str(a.balance)) if a.balance is not None else Decimal("0")
-                if a.account_type in _CASH_TYPES:
-                    cash_total += bal
-                elif a.account_type in _INV_TYPES:
-                    inv_total += bal
-                elif a.account_type in _LIAB_TYPES:
-                    liab_total += bal
-
-                icon = "➕" if a.account_type not in _LIAB_TYPES else "➖"
-                excl = " (exclòs)" if not a.include_in_networth else ""
+                if a.include_in_networth:
+                    if a.account_type in _CASH_TYPES:
+                        cash_total += bal
+                    elif a.account_type in _INV_TYPES:
+                        inv_total += bal
+                    elif a.account_type in _LIAB_TYPES:
+                        liab_total += bal
+                    icon = "➕" if a.account_type not in _LIAB_TYPES else "➖"
+                    excl = ""
+                else:
+                    icon = "  "
+                    excl = "  (exclòs del net worth)"
                 print(f"  {icon} {a.name:<30} {a.account_type:<12}  {a.currency}  {_fmt_eur(a.balance)}{excl}")
 
         total_net_worth = cash_total + inv_total - liab_total
 
+        lbl_inv  = "Cartera d'inversió"
+        lbl_liab = "Passius (crèdit/préstec)"
         print()
         print(f"  {'Efectiu i comptes':<44}  {_fmt_eur(cash_total)}")
-        print(f"  {'Cartera d'inversió':<44}  {_fmt_eur(inv_total)}")
+        print(f"  {lbl_inv:<44}  {_fmt_eur(inv_total)}")
         if liab_total > 0:
-            print(f"  {'Passius (crèdit/préstec)':<44}  {_fmt_eur(-liab_total)}")
+            print(f"  {lbl_liab:<44}  {_fmt_eur(-liab_total)}")
 
         # ── 2. Posicions d'inversió ────────────────────────────────────────────
         print()
