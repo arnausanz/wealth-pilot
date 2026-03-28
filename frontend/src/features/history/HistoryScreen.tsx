@@ -265,7 +265,7 @@ export function HistoryScreen() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '56px 24px 16px' }}>
+      <div style={{ padding: '68px 24px 16px' }}>
         <div
           style={{
             fontSize: 24,

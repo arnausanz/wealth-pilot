@@ -5,8 +5,8 @@
   --color-glass-border: rgba(255, 255, 255, 0.7);
   --color-border: rgba(0, 0, 0, 0.05);
   --color-text: #0F172A;
-  --color-text-secondary: rgba(0, 0, 0, 0.5);
-  --color-text-tertiary: rgba(0, 0, 0, 0.25);
+  --color-text-secondary: rgba(0, 0, 0, 0.62);
+  --color-text-tertiary: rgba(0, 0, 0, 0.38);
   --color-accent: #2563EB;
   --color-positive: #059669;
   --color-negative: #DC2626;
@@ -23,8 +23,8 @@ html.dark {
   --color-glass-border: rgba(255, 255, 255, 0.08);
   --color-border: rgba(255, 255, 255, 0.06);
   --color-text: #F1F5F9;
-  --color-text-secondary: rgba(255, 255, 255, 0.55);
-  --color-text-tertiary: rgba(255, 255, 255, 0.25);
+  --color-text-secondary: rgba(255, 255, 255, 0.65);
+  --color-text-tertiary: rgba(255, 255, 255, 0.38);
   --color-accent: #3B82F6;
   --color-positive: #34D399;
   --color-negative: #FB7185;
@@ -137,6 +137,11 @@ input[type='date']::-webkit-calendar-picker-indicator {
 
 html.dark input[type='date']::-webkit-calendar-picker-indicator {
   filter: invert(1);
+}
+
+/* ─── Settings list groups: remove border from last item ──────────────── */
+.settings-group > div:last-child {
+  border-bottom: none;
 }
 
 /* ─── Range slider (SimulationScreen) ───────────────────────────────────── */

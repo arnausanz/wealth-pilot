@@ -5,6 +5,7 @@ import type { NetWorthSnapshot, AssetPrice } from '../../types';
 
 interface AlertsProps {
   snapshots: NetWorthSnapshot[];
+  /** Preus de mercat — reservat per a alertes futures de variació diària */
   prices: AssetPrice[];
 }
 
@@ -17,6 +18,7 @@ interface Alert {
 const CASH_TARGET_PCT = 28;
 const DEVIATION_THRESHOLD = 5;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function Alerts({ snapshots, prices: _prices }: AlertsProps) {
   const alerts = useMemo((): Alert[] => {
     const result: Alert[] = [];

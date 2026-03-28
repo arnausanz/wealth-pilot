@@ -240,6 +240,7 @@ function ToggleField({
 function SettingsCard({ children }: { children: React.ReactNode }) {
   return (
     <div
+      className="settings-group"
       style={{
         background: 'var(--color-glass-bg)',
         backdropFilter: 'var(--glass-blur)',
@@ -248,6 +249,7 @@ function SettingsCard({ children }: { children: React.ReactNode }) {
         borderRadius: 16,
         padding: '4px 16px',
         marginBottom: 8,
+        boxShadow: 'var(--card-shadow)',
       }}
     >
       {children}
@@ -806,7 +808,7 @@ export function SettingsScreen() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '56px 24px 16px' }}>
+      <div style={{ padding: '68px 24px 16px' }}>
         <div
           style={{
             fontSize: 24,

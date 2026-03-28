@@ -67,7 +67,7 @@ export function DashboardScreen() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '56px 24px 0' }}>
+      <div style={{ padding: '68px 24px 0' }}>
         <div
           style={{
             display: 'flex',

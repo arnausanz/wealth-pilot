@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { GoalRing } from '../../components/charts/GoalRing';
 import { Card } from '../../components/ui/Card';
 import { useConfigAssets } from '../../hooks/useConfig';
 import { n } from '../../types';
@@ -41,7 +40,6 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
 
     const rows: DeviationRow[] = [];
 
-    // Assets d'inversió (de asset_snapshots)
     for (const snap of lastSnapshot.asset_snapshots ?? []) {
       const config = configAssets.find((a) => a.id === snap.asset_id);
       if (!config || config.target_weight == null) continue;
@@ -80,104 +78,96 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
     <div style={{ padding: '20px 24px 0' }}>
 
       {/* ── Card d'objectiu — amplada completa ── */}
-      <Card style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 10 }}>
-        {/* Rodona de progrés */}
-        <GoalRing
-          current={netWorth}
-          target={goalAmount}
-          label={goalLabel.slice(0, 6)}
-        />
+      <Card style={{ marginBottom: 10 }}>
+        {/* Capçalera: label + any */}
+        <div
+          style={{
+            fontSize: 10,
+            fontFamily: 'var(--font-num)',
+            letterSpacing: '0.06em',
+            color: 'var(--color-text-tertiary)',
+            textTransform: 'uppercase',
+            marginBottom: 10,
+          }}
+        >
+          {goalLabel} · {goalYear}
+        </div>
 
-        {/* Info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
+        {/* Import actual vs objectiu */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          <span
             style={{
-              fontSize: 9,
+              fontSize: 26,
+              fontWeight: 700,
               fontFamily: 'var(--font-num)',
-              letterSpacing: '0.06em',
-              color: 'var(--color-text-tertiary)',
-              textTransform: 'uppercase',
-              marginBottom: 4,
+              letterSpacing: '-0.02em',
+              color: 'var(--color-text)',
+              lineHeight: 1,
             }}
           >
-            {goalLabel} · {goalYear}
-          </div>
+            €{(netWorth / 1000).toFixed(1)}k
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              color: 'var(--color-text-tertiary)',
+              fontFamily: 'var(--font-num)',
+            }}
+          >
+            de €{(goalAmount / 1000).toFixed(0)}k
+          </span>
+        </div>
 
-          {/* Import actual vs objectiu */}
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap' }}>
-            <span
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                fontFamily: 'var(--font-num)',
-                letterSpacing: '-0.02em',
-                color: 'var(--color-text)',
-              }}
-            >
-              €{(netWorth / 1000).toFixed(1)}k
-            </span>
+        {/* Barra de progrés */}
+        <div
+          style={{
+            height: 6,
+            borderRadius: 3,
+            background: 'var(--color-border)',
+            overflow: 'hidden',
+            marginBottom: 8,
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${goalPct}%`,
+              background: 'var(--color-accent)',
+              borderRadius: 3,
+              transition: 'width 1s ease',
+            }}
+          />
+        </div>
+
+        {/* % assolit + Falten */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <span
+            style={{
+              fontSize: 13,
+              fontFamily: 'var(--font-num)',
+              fontWeight: 600,
+              color: 'var(--color-accent)',
+            }}
+          >
+            {goalPct.toFixed(1)}% assolit
+          </span>
+          {remaining > 0 && (
             <span
               style={{
                 fontSize: 11,
+                fontFamily: 'var(--font-num)',
                 color: 'var(--color-text-tertiary)',
-                fontFamily: 'var(--font-num)',
               }}
             >
-              de €{(goalAmount / 1000).toFixed(0)}k
+              Falten €{remaining.toLocaleString('ca-ES', { maximumFractionDigits: 0 })}
             </span>
-          </div>
-
-          {/* Barra de progrés */}
-          <div
-            style={{
-              marginTop: 8,
-              height: 4,
-              borderRadius: 2,
-              background: 'var(--color-border)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                height: '100%',
-                width: `${goalPct}%`,
-                background: 'var(--color-accent)',
-                borderRadius: 2,
-                transition: 'width 1s ease',
-              }}
-            />
-          </div>
-
-          {/* Falten X€ */}
-          <div
-            style={{
-              marginTop: 4,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span
-              style={{
-                fontSize: 10,
-                fontFamily: 'var(--font-num)',
-                color: 'var(--color-accent)',
-              }}
-            >
-              {goalPct.toFixed(1)}% assolit
-            </span>
-            {remaining > 0 && (
-              <span
-                style={{
-                  fontSize: 10,
-                  fontFamily: 'var(--font-num)',
-                  color: 'var(--color-text-tertiary)',
-                }}
-              >
-                Falten €{remaining.toLocaleString('ca-ES', { maximumFractionDigits: 0 })}
-              </span>
-            )}
-          </div>
+          )}
         </div>
       </Card>
 
@@ -186,7 +176,7 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
         <Card>
           <div
             style={{
-              fontSize: 9,
+              fontSize: 10,
               fontFamily: 'var(--font-num)',
               letterSpacing: '0.06em',
               color: 'var(--color-text-tertiary)',
@@ -196,14 +186,21 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
           >
             Pesos objectiu
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {deviations.map((row) => {
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {deviations.map((row, i) => {
               const dColor = deviationColor(row.diff);
               const sign = row.diff >= 0 ? '+' : '';
+              const isLast = i === deviations.length - 1;
               return (
                 <div
                   key={row.id}
-                  style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '9px 0',
+                    borderBottom: isLast ? 'none' : '1px solid var(--color-glass-border)',
+                  }}
                 >
                   {/* Dot de color de l'asset */}
                   <div
@@ -219,7 +216,7 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
                   <span
                     style={{
                       flex: 1,
-                      fontSize: 12,
+                      fontSize: 13,
                       color: 'var(--color-text-secondary)',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -231,7 +228,7 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
                   {/* Actual / Objectiu */}
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontFamily: 'var(--font-num)',
                       color: 'var(--color-text-tertiary)',
                     }}
@@ -240,7 +237,7 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
                   </span>
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 10,
                       fontFamily: 'var(--font-num)',
                       color: 'var(--color-text-tertiary)',
                       margin: '0 2px',
@@ -251,11 +248,11 @@ export function StatusCards({ netWorth, goalAmount, goalYear, goalLabel, lastSna
                   {/* Desviació */}
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontFamily: 'var(--font-num)',
                       fontWeight: 600,
                       color: dColor,
-                      minWidth: 40,
+                      minWidth: 42,
                       textAlign: 'right',
                     }}
                   >

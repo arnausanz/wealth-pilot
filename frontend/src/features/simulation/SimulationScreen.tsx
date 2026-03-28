@@ -3,7 +3,8 @@ import { Card } from '../../components/ui/Card';
 import { ProjectionChart } from '../../components/charts/ProjectionChart';
 import { useProjection, useScenariosInfo } from '../../hooks/useSimulation';
 import { n } from '../../types';
-import { OpenSimulator } from './OpenSimulator';
+// OpenSimulator importat per quan s'activi el tab 'Personalitzat' (Roadmap § 8.2)
+import { OpenSimulator as _OpenSimulator } from './OpenSimulator';
 
 // Retarda les peticions a l'API mentre l'slider es mou
 function useDebounce<T>(value: T, delay: number): T {
@@ -265,11 +266,7 @@ function ContributionInfo({
 
 // ─── Main Screen ─────────────────────────────────────────────────────────────
 
-type SimTab = 'projection' | 'custom';
-
 export function SimulationScreen() {
-  // Tab 'custom' desactivat temporalment — pendent redisseny (veure Roadmap § 8.2)
-  const [simTab] = useState<SimTab>('projection');
   const [horizonYears, setHorizonYears] = useState(10);
   // Debounce per evitar peticions a l'API en cada tick del slider
   const debouncedHorizon = useDebounce(horizonYears, 350);
@@ -295,7 +292,7 @@ export function SimulationScreen() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '56px 24px 12px' }}>
+      <div style={{ padding: '68px 24px 12px' }}>
         <div
           style={{
             display: 'flex',
@@ -359,14 +356,8 @@ export function SimulationScreen() {
         </div>
       </div>
 
-      {simTab === 'custom' && (
-        <div style={{ marginTop: 16 }}>
-          <OpenSimulator />
-        </div>
-      )}
-
-      {/* Projection tab content */}
-      {simTab === 'projection' && <>
+      {/* Projection content */}
+      {<>
 
       {/* Slider */}
       <HorizonSlider value={horizonYears} onChange={setHorizonYears} />
