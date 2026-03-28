@@ -207,14 +207,16 @@ async def run():
             )
 
         # ── 3. Resum final ─────────────────────────────────────────────────────
+        lbl_cash_ttl = "Efectiu (comptes + cash no invertit)"
+        lbl_inv_ttl  = "Cartera (shares x preu YF)"
+        net_total    = total_net_worth + total_tracked
         print()
         print(_sep("Resum"))
-        print(f"  {'NET WORTH TOTAL (comptes MW)':<44}  {_fmt_eur(total_net_worth)}")
+        print(f"  {lbl_cash_ttl:<44}  {_fmt_eur(total_net_worth)}")
         if total_tracked > 0:
-            print(f"  {'Cartera rastreada (shares × preu YF)':<44}  {_fmt_eur(total_tracked)}")
-            untracked = inv_total - total_tracked
-            if abs(untracked) > Decimal("1"):
-                print(f"  {'  Diferència no rastreada (NUKL, etc.)':<44}  {_fmt_eur(untracked)}")
+            print(f"  {lbl_inv_ttl:<44}  {_fmt_eur(total_tracked)}")
+            print(f"  {'':─<48}")
+        print(f"  {'NET WORTH TOTAL':<44}  {_fmt_eur(net_total)}")
 
         # ── 4. Últim snapshot guardat ──────────────────────────────────────────
         print()
