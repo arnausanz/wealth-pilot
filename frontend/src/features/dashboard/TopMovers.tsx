@@ -62,7 +62,7 @@ export function TopMovers({ prices }: TopMoversProps) {
       >
         Moviments del dia
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
         {topMovers.map((price, i) => {
           const isFirst = i === 0;
           const isLast = i === topMovers.length - 1;

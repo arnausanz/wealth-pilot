@@ -72,6 +72,10 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background 0.4s ease, color 0.4s ease;
+  /* Prevenir overscroll/rubber-band en iOS */
+  overscroll-behavior: none;
+  /* Prevenir context menu en long-press */
+  -webkit-touch-callout: none;
 }
 
 body {
@@ -80,6 +84,22 @@ body {
   color: var(--color-text);
   min-height: 100vh;
   overflow-x: hidden;
+  overscroll-behavior: none;
+  /* Flash blau/gris en tap (iOS/Android) */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevenir selecció de text accidental */
+  -webkit-user-select: none;
+  user-select: none;
+  /* Cursor per defecte — no pointer de web */
+  cursor: default;
+}
+
+/* Permet selecció de text on té sentit */
+input, textarea, [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+  /* Prevenir zoom en focus (font mínim 16px) */
+  font-size: 16px;
 }
 
 #root {
@@ -87,14 +107,19 @@ body {
 }
 
 button {
-  cursor: pointer;
+  cursor: default;
   font-family: inherit;
   border: none;
   background: none;
+  /* Touch targets: mínim 44px (Apple HIG) */
+  touch-action: manipulation;
 }
 
-button:hover {
-  opacity: 0.85;
+/* Hover només en dispositius que el suporten (desktop) */
+@media (hover: hover) {
+  button:hover {
+    opacity: 0.85;
+  }
 }
 
 button:active {

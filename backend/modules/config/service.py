@@ -249,7 +249,7 @@ async def patch_parameter(db: AsyncSession, key: str, data: ParameterPatch) -> P
 
 # Estructura: (ticker_yf o None, display_name, target_weight)
 _DEFAULT_TARGET_WEIGHTS: list[tuple[str | None, str, Decimal]] = [
-    ("IWDA.AS",  "MSCI World",       Decimal("22.0")),
+    ("IWDA.AS",  "MSCI World",       Decimal("35.0")),
     ("PPFB.DE",  "Physical Gold",    Decimal("12.0")),
     ("IMAE.AS",  "MSCI Europe",      Decimal("10.0")),
     ("EMIM.AS",  "MSCI EM IMI",      Decimal("5.0")),

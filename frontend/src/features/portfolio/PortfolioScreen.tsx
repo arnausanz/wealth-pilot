@@ -208,7 +208,7 @@ export function PortfolioScreen() {
         <>
           {/* Asset list */}
           <div style={{ padding: '0 24px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
               {assets.map((asset, i) => {
                 const weight = totalValue > 0 ? (n(asset.value_eur) / totalValue) * 100 : 0;
                 return (

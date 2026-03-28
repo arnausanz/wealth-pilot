@@ -13,43 +13,6 @@ import { Allocation } from './Allocation';
 import { TopMovers } from './TopMovers';
 import { Alerts } from './Alerts';
 
-function StatusBar() {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '14px 24px 0',
-        fontSize: 12,
-        fontWeight: 600,
-        color: 'var(--color-text-secondary)',
-      }}
-    >
-      <span style={{ fontFamily: 'var(--font-num)' }}>9:41</span>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="var(--color-text-secondary)">
-          <rect x="0" y="6" width="3" height="6" rx="0.5" />
-          <rect x="4.5" y="4" width="3" height="8" rx="0.5" />
-          <rect x="9" y="1.5" width="3" height="10.5" rx="0.5" />
-          <rect x="13.5" y="0" width="2.5" height="12" rx="0.5" opacity="0.3" />
-        </svg>
-        <svg
-          width="18"
-          height="12"
-          viewBox="0 0 18 12"
-          fill="none"
-          stroke="var(--color-text-secondary)"
-          strokeWidth="1.2"
-        >
-          <rect x="0.5" y="1" width="14" height="10" rx="2" />
-          <rect x="15" y="4" width="2" height="4" rx="0.5" fill="var(--color-text-secondary)" />
-          <rect x="2" y="3" width="8" height="6" rx="1" fill="var(--color-positive)" />
-        </svg>
-      </div>
-    </div>
-  );
-}
 
 function SkeletonCard({ height = 100 }: { height?: number }) {
   return (
@@ -103,11 +66,8 @@ export function DashboardScreen() {
         transition: 'background 0.4s ease, color 0.4s ease',
       }}
     >
-      {/* Status bar */}
-      <StatusBar />
-
       {/* Header */}
-      <div style={{ padding: '20px 24px 0' }}>
+      <div style={{ padding: '56px 24px 0' }}>
         <div
           style={{
             display: 'flex',
@@ -116,18 +76,6 @@ export function DashboardScreen() {
           }}
         >
           <div>
-            <div
-              style={{
-                fontSize: 10,
-                fontFamily: 'var(--font-num)',
-                letterSpacing: '0.14em',
-                color: 'var(--color-accent)',
-                fontWeight: 600,
-                marginBottom: 2,
-              }}
-            >
-              WEALTHPILOT
-            </div>
             <div
               style={{
                 fontSize: 24,

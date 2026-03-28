@@ -268,7 +268,8 @@ function ContributionInfo({
 type SimTab = 'projection' | 'custom';
 
 export function SimulationScreen() {
-  const [simTab, setSimTab] = useState<SimTab>('projection');
+  // Tab 'custom' desactivat temporalment — pendent redisseny (veure Roadmap § 8.2)
+  const [simTab] = useState<SimTab>('projection');
   const [horizonYears, setHorizonYears] = useState(10);
   // Debounce per evitar peticions a l'API en cada tick del slider
   const debouncedHorizon = useDebounce(horizonYears, 350);
@@ -313,41 +314,7 @@ export function SimulationScreen() {
             >
               Simulació
             </div>
-            {/* Tab bar */}
-            <div
-              style={{
-                display: 'flex',
-                gap: 0,
-                marginTop: 12,
-                borderBottom: '1px solid var(--color-glass-border)',
-              }}
-            >
-              {(['projection', 'custom'] as SimTab[]).map((t) => {
-                const label = t === 'projection' ? 'Projecció' : 'Personalitzat';
-                const active = simTab === t;
-                return (
-                  <button
-                    key={t}
-                    onClick={() => setSimTab(t)}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'none',
-                      border: 'none',
-                      borderBottom: `2px solid ${active ? 'var(--color-accent)' : 'transparent'}`,
-                      color: active ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
-                      fontSize: 12,
-                      fontFamily: 'var(--font-num)',
-                      fontWeight: active ? 600 : 400,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
+            {/* Tab bar — 'Personalitzat' ocult fins al redisseny */}
             {startValue > 0 && (
               <div
                 style={{
@@ -421,7 +388,7 @@ export function SimulationScreen() {
             adverse={scenarios.adverse.data_points}
             base={scenarios.base.data_points}
             optimistic={scenarios.optimistic.data_points}
-            horizonYears={horizonYears}
+            horizonYears={debouncedHorizon}
             goalValue={goalTarget}
             width={390}
             height={240}

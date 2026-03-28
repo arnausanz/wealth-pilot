@@ -42,7 +42,7 @@ ASSETS = [
         "domicile_country": "Ireland",
         "sector": "global_equity",
         "color_hex": "#4F8EF7",
-        "target_weight": Decimal("22.0"),
+        "target_weight": Decimal("35.0"),
         "sort_order": 1,
     },
     {

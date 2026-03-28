@@ -61,8 +61,9 @@ Prioritats identificades durant el test mòbil:
 - [ ] **Tooltip al gràfic de la home**: mantenir premut → quadre flotant amb net worth i rendiment a aquella data (estil Trade Republic). Implementar amb `onTouchStart`/`onTouchMove` sobre el SVG, calculant la posició X relativa i interpolant el snapshot més proper.
 
 ### 8.2 Simulació
-- [ ] Simplificar el flow: slider + resultats en un sol scroll, sense tabs
-- [ ] Simulador Obert: UX més intuïtiva per crear i afegir events
+- [ ] **Tornar a activar tab "Personalitzat"** (ara ocult): redissenyar completament el `OpenSimulator` perquè sigui intuïtiu en mòbil — flow de creació d'events pas a pas, no formulari
+- [ ] **Millorar card "Projecció"** al dashboard: ara mostra `netWorth / goalAmount * 100` (no és una projecció real). Hauria de comparar el net worth actual vs la corba de projecció base a la data d'avui, i dir si vas per davant/darrere del ritme necessari
+- [ ] Simplificar el flow: slider + resultats en un sol scroll
 - [ ] Previsualització en temps real mentre s'afegeix un event (sense botó "Comparar")
 - [ ] Cards de resum de simulació més llegibles (valors finals destacats)
 
@@ -79,7 +80,16 @@ Prioritats identificades durant el test mòbil:
 - [ ] Agrupació per dia/setmana amb subtotals
 - [ ] Millor badge visual per tipus de transacció (compra, venda, ingrés, despesa)
 
-### 8.5 Net Worth — visibilitat de comptes
+### 8.6 Alertes dinàmiques
+**Context:** El backend ja té `GET /api/v1/analytics/alerts` (Phase 5). El frontend (`Alerts.tsx`) ara calcula alertes localment (desviació de cash, P&L < -30%). Cal connectar els dos.
+- [ ] `DashboardScreen`: cridar `useAnalyticsAlerts()` i combinar les alertes del backend amb les locals
+- [ ] Backend `analytics/service.py` — ampliar `get_alerts()`: comparar cada categoria de despesa vs. mitjana dels últims 3 mesos → alerta si variació > 30%
+- [ ] Alertes de mercat: actiu amb variació diària > ±5% → "Bitcoin ha pujat un X% avui"
+- [ ] Alertes d'objectiu: si el net worth supera l'objectiu → notificació positiva
+- [ ] Severitat per nivells: `info` (blau), `warning` (groc), `danger` (vermell)
+- [ ] Persistència: marcar alertes com a llegides (no repetir fins al dia següent)
+
+### 8.7 Net Worth — visibilitat de comptes
 - [ ] Desglossar `cash_and_bank_value` per compte (taula `mw_accounts`)
 - [ ] Mostrar saldo de cada compte a la pantalla principal (o expandible)
 - [ ] Indicar quin compte té la liquiditat (compte corrent vs. estalvi)
