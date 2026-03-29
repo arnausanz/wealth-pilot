@@ -89,13 +89,14 @@ async def generate_snapshot(
     inv_value = Decimal("0")
 
     # ── 2. Posicions per asset (shares × preu YF actual) ────────────────────
-    # MoneyWiz pot registrar compres d'ETF de tres maneres:
-    #   - investment_buy / investment_sell : compra/venda nativa des del compte inversió
-    #   - expense / income                : compra/venda registrada des del compte corrent
-    #   - transfer_out / transfer_in      : transferència entre comptes (compra/venda)
-    # Qualsevol transacció amb shares != NULL és una operació d'inversió.
-    # Direcció: diners sortint (expense, transfer_out, investment_buy) = compra (+shares)
-    #           diners entrant (income,  transfer_in,  investment_sell) = venda  (-shares)
+    # MoneyWiz registra totes les operacions des del compte Trade Republic (investment).
+    # Anàlisi empírica de les direccions des del compte d'inversió:
+    #   COMPRA (+shares): investment_buy, expense, income, transfer_in
+    #   VENDA  (-shares): investment_sell, transfer_out
+    #
+    # Exemples validats: NUKL expense(+11.07) + investment_sell(-11.07) = 0 ✓
+    #                    EUNK transfer_out(-17) = posició venuda ✓
+    #                    EUNL expense+income+investment_buy = 81.49 participacions ✓
     positions_rows = (await db.execute(text("""
         SELECT
             a.id          AS asset_id,
@@ -103,14 +104,14 @@ async def generate_snapshot(
             a.ticker_yf,
             SUM(
                 CASE
-                    WHEN mt.tx_type IN ('investment_buy',  'expense', 'transfer_out') THEN  mt.shares
-                    WHEN mt.tx_type IN ('investment_sell', 'income',  'transfer_in')  THEN -mt.shares
+                    WHEN mt.tx_type IN ('investment_buy', 'expense', 'income', 'transfer_in') THEN  mt.shares
+                    WHEN mt.tx_type IN ('investment_sell', 'transfer_out')                    THEN -mt.shares
                     ELSE 0
                 END
             )                                             AS total_shares,
             SUM(
                 CASE
-                    WHEN mt.tx_type IN ('investment_buy', 'expense', 'transfer_out') THEN mt.amount_eur
+                    WHEN mt.tx_type IN ('investment_buy', 'expense', 'income', 'transfer_in') THEN mt.amount_eur
                     ELSE 0
                 END
             )                                             AS cost_basis,
@@ -126,16 +127,14 @@ async def generate_snapshot(
             ORDER BY price_date DESC
             LIMIT 1
         ) ph ON TRUE
-        JOIN mw_accounts acc ON acc.id = mt.account_id
         WHERE mt.shares IS NOT NULL
-          AND acc.account_type = 'investment'
           AND mt.tx_date <= :snap_date
           AND a.is_active = TRUE
         GROUP BY a.id, a.display_name, a.ticker_yf, ph.price_close, ph.currency
         HAVING SUM(
             CASE
-                WHEN mt.tx_type IN ('investment_buy',  'expense', 'transfer_out') THEN  mt.shares
-                WHEN mt.tx_type IN ('investment_sell', 'income',  'transfer_in')  THEN -mt.shares
+                WHEN mt.tx_type IN ('investment_buy', 'expense', 'income', 'transfer_in') THEN  mt.shares
+                WHEN mt.tx_type IN ('investment_sell', 'transfer_out')                    THEN -mt.shares
                 ELSE 0
             END
         ) > 0
