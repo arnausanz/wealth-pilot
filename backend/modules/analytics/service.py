@@ -26,6 +26,7 @@ async def get_expense_breakdown(
     month: int | None = None,
 ) -> ExpenseBreakdownResponse:
     """Top expense categories for a given year/month."""
+    # shares IS NULL: exclou compres d'ETF registrades com expense per MoneyWiz
     if month is not None:
         sql = text("""
             SELECT
@@ -36,6 +37,7 @@ async def get_expense_breakdown(
             FROM mw_transactions t
             LEFT JOIN mw_categories c ON c.id = t.category_id
             WHERE t.tx_type = 'expense'
+              AND t.shares IS NULL
               AND t.is_excluded_from_reports = FALSE
               AND EXTRACT(YEAR  FROM t.tx_date) = :year
               AND EXTRACT(MONTH FROM t.tx_date) = :month
@@ -54,6 +56,7 @@ async def get_expense_breakdown(
             FROM mw_transactions t
             LEFT JOIN mw_categories c ON c.id = t.category_id
             WHERE t.tx_type = 'expense'
+              AND t.shares IS NULL
               AND t.is_excluded_from_reports = FALSE
               AND EXTRACT(YEAR FROM t.tx_date) = :year
             GROUP BY c.name, c.color_hex
@@ -88,14 +91,17 @@ async def get_expense_breakdown(
 
 async def get_cashflow(db: AsyncSession, months: int = 12) -> CashflowResponse:
     """Monthly cashflow: income vs expenses vs investments for last N months."""
+    # Regla clau: shares IS NULL → transacció financera real (expense/income sense inversió)
+    # shares IS NOT NULL → operació d'inversió (compra/venda ETF, crypto, etc.)
+    # MoneyWiz pot registrar compres d'ETF com expense/income/transfer → shares != NULL els identifica
     sql = text("""
         SELECT
             TO_CHAR(DATE_TRUNC('month', tx_date), 'YYYY-MM') AS month,
-            SUM(CASE WHEN tx_type = 'income'
+            SUM(CASE WHEN tx_type = 'income'  AND shares IS NULL
                      THEN amount_eur ELSE 0 END)              AS income_eur,
-            SUM(CASE WHEN tx_type = 'expense'
+            SUM(CASE WHEN tx_type = 'expense' AND shares IS NULL
                      THEN ABS(amount_eur) ELSE 0 END)         AS expenses_eur,
-            SUM(CASE WHEN tx_type IN ('investment_buy', 'investment_sell')
+            SUM(CASE WHEN shares IS NOT NULL
                      THEN ABS(amount_eur) ELSE 0 END)         AS investments_eur
         FROM mw_transactions
         WHERE is_excluded_from_reports = FALSE
@@ -191,6 +197,7 @@ async def get_alerts(db: AsyncSession) -> AlertsResponse:
             SUM(ABS(amount_eur)) AS expenses_eur
         FROM mw_transactions
         WHERE tx_type = 'expense'
+          AND shares IS NULL
           AND is_excluded_from_reports = FALSE
           AND tx_date >= DATE_TRUNC('month', NOW()) - INTERVAL '3 months'
           AND tx_date <  DATE_TRUNC('month', NOW()) + INTERVAL '1 month'
@@ -235,8 +242,10 @@ async def get_alerts(db: AsyncSession) -> AlertsResponse:
     # ── Alert 2: Savings rate this month ───────────────────────────────────
     sql_savings = text("""
         SELECT
-            SUM(CASE WHEN tx_type = 'income'  THEN amount_eur ELSE 0 END)       AS income_eur,
-            SUM(CASE WHEN tx_type = 'expense' THEN ABS(amount_eur) ELSE 0 END)  AS expenses_eur
+            SUM(CASE WHEN tx_type = 'income'  AND shares IS NULL
+                     THEN amount_eur ELSE 0 END)        AS income_eur,
+            SUM(CASE WHEN tx_type = 'expense' AND shares IS NULL
+                     THEN ABS(amount_eur) ELSE 0 END)   AS expenses_eur
         FROM mw_transactions
         WHERE is_excluded_from_reports = FALSE
           AND tx_date >= DATE_TRUNC('month', NOW())
@@ -273,6 +282,7 @@ async def get_alerts(db: AsyncSession) -> AlertsResponse:
             FROM mw_transactions t
             LEFT JOIN mw_categories c ON c.id = t.category_id
             WHERE t.tx_type = 'expense'
+              AND t.shares IS NULL
               AND t.is_excluded_from_reports = FALSE
               AND t.tx_date >= DATE_TRUNC('month', NOW()) - INTERVAL '3 months'
               AND t.tx_date <  DATE_TRUNC('month', NOW()) + INTERVAL '1 month'

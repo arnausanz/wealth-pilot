@@ -106,7 +106,7 @@ async def get_transactions(
             mt.tx_date,
             mt.tx_type,
             mt.amount_eur,
-            mt.description,
+            COALESCE(mt.description, mt.notes) AS description,
             mt.mw_symbol,
             mt.shares,
             a.display_name,

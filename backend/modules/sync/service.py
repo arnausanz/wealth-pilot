@@ -210,8 +210,10 @@ def _read_transactions(conn: sqlite3.Connection) -> list[dict]:
             s.ZSTATUS1,
             s.ZNUMBEROFSHARES,
             s.ZSYMBOL1,
+            payee.ZNAME AS payee_name,
             agg.ZCATEGORY AS cat_mw_pk
         FROM ZSYNCOBJECT s
+        LEFT JOIN ZSYNCOBJECT payee ON payee.Z_PK = s.ZPAYEE
         LEFT JOIN (
             SELECT ZTRANSACTION, MIN(ZCATEGORY) AS ZCATEGORY
             FROM ZCATEGORYASSIGMENT
@@ -229,6 +231,10 @@ def _read_transactions(conn: sqlite3.Connection) -> list[dict]:
             continue
         amount = abs(float(r["ZAMOUNT1"])) if r["ZAMOUNT1"] is not None else 0.0
         is_inv = r["Z_ENT"] in _INV_TYPES
+        # description: payee name si existeix, sinó notes de MoneyWiz
+        payee = r["payee_name"] if r["payee_name"] else None
+        notes_val = r["ZNOTES1"] if r["ZNOTES1"] else None
+        description = payee or notes_val
         txs.append({
             "mw_internal_id": str(r["Z_PK"]),
             "tx_type": _TX_TYPE_MAP[r["Z_ENT"]],
@@ -237,7 +243,8 @@ def _read_transactions(conn: sqlite3.Connection) -> list[dict]:
             "currency": r["ZCURRENCYNAME2"] or "EUR",
             # Si moneda == EUR, amount_eur = amount. Gestió FX multi-divisa: tasca futura.
             "amount_eur": amount,
-            "notes": r["ZNOTES1"],
+            "description": description,
+            "notes": notes_val,
             "is_reconciled": bool(r["ZSTATUS1"]) if r["ZSTATUS1"] is not None else False,
             "mw_account_id": str(r["ZACCOUNT2"]) if r["ZACCOUNT2"] else None,
             "mw_category_id": str(r["cat_mw_pk"]) if r["cat_mw_pk"] else None,
@@ -395,7 +402,8 @@ async def _upsert_transactions(
             "amount": t["amount"],
             "currency": t["currency"],
             "amount_eur": t["amount_eur"],
-            "notes": t["notes"],
+            "description": t.get("description"),
+            "notes": t.get("notes"),
             "is_reconciled": t["is_reconciled"],
             "shares": t.get("shares"),
             "mw_symbol": t.get("mw_symbol"),
@@ -412,10 +420,12 @@ async def _upsert_transactions(
             set_={
                 "account_id": stmt.excluded.account_id,
                 "category_id": stmt.excluded.category_id,
+                "tx_type": stmt.excluded.tx_type,       # actualitzar si mapatge canvia
                 "tx_date": stmt.excluded.tx_date,
                 "amount": stmt.excluded.amount,
                 "currency": stmt.excluded.currency,
                 "amount_eur": stmt.excluded.amount_eur,
+                "description": stmt.excluded.description,
                 "notes": stmt.excluded.notes,
                 "is_reconciled": stmt.excluded.is_reconciled,
                 "shares": stmt.excluded.shares,
