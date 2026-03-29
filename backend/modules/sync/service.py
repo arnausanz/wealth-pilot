@@ -462,14 +462,23 @@ async def _prune_removed(
             logger.info("Prune: eliminades %d transaccions obsoletes", r.rowcount)
 
     if cat_ids:
-        r = await db.execute(
+        # Pas 1: elimina categories filles (parent_id IS NOT NULL) no presents al backup.
+        # Pas 2: elimina categories pare restants. Necessari per la FK self-referent.
+        r1 = await db.execute(
             sa_delete(MWCategory).where(
-                MWCategory.mw_internal_id.notin_(cat_ids)
+                MWCategory.mw_internal_id.notin_(cat_ids),
+                MWCategory.parent_id.isnot(None),
             )
         )
-        deleted += r.rowcount
-        if r.rowcount:
-            logger.info("Prune: eliminades %d categories obsoletes", r.rowcount)
+        r2 = await db.execute(
+            sa_delete(MWCategory).where(
+                MWCategory.mw_internal_id.notin_(cat_ids),
+            )
+        )
+        n_cat_deleted = r1.rowcount + r2.rowcount
+        deleted += n_cat_deleted
+        if n_cat_deleted:
+            logger.info("Prune: eliminades %d categories obsoletes", n_cat_deleted)
 
     if acc_ids:
         r = await db.execute(
