@@ -462,23 +462,24 @@ async def _prune_removed(
             logger.info("Prune: eliminades %d transaccions obsoletes", r.rowcount)
 
     if cat_ids:
-        # Pas 1: elimina categories filles (parent_id IS NOT NULL) no presents al backup.
-        # Pas 2: elimina categories pare restants. Necessari per la FK self-referent.
-        r1 = await db.execute(
+        # La FK self-referent (parent_id → id) impedeix eliminar pares si fills els referencien.
+        # Solució: posar parent_id = NULL per a les categories a eliminar, després eliminar-les.
+        await db.execute(
+            text("""
+                UPDATE mw_categories
+                SET parent_id = NULL
+                WHERE mw_internal_id != ALL(:keep)
+            """),
+            {"keep": cat_ids},
+        )
+        r = await db.execute(
             sa_delete(MWCategory).where(
-                MWCategory.mw_internal_id.notin_(cat_ids),
-                MWCategory.parent_id.isnot(None),
+                MWCategory.mw_internal_id.notin_(cat_ids)
             )
         )
-        r2 = await db.execute(
-            sa_delete(MWCategory).where(
-                MWCategory.mw_internal_id.notin_(cat_ids),
-            )
-        )
-        n_cat_deleted = r1.rowcount + r2.rowcount
-        deleted += n_cat_deleted
-        if n_cat_deleted:
-            logger.info("Prune: eliminades %d categories obsoletes", n_cat_deleted)
+        deleted += r.rowcount
+        if r.rowcount:
+            logger.info("Prune: eliminades %d categories obsoletes", r.rowcount)
 
     if acc_ids:
         r = await db.execute(
