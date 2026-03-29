@@ -9,16 +9,18 @@ interface TransactionFilters {
   ticker_yf?: string;
   date_from?: string;
   date_to?: string;
+  only_investments?: boolean;
 }
 
 export function useTransactions(filters: TransactionFilters = {}) {
   const params = new URLSearchParams();
-  if (filters.page)         params.set('page', String(filters.page));
-  if (filters.per_page)     params.set('per_page', String(filters.per_page));
-  if (filters.tx_type)      params.set('tx_type', filters.tx_type);
-  if (filters.ticker_yf)    params.set('ticker_yf', filters.ticker_yf);
-  if (filters.date_from)    params.set('date_from', filters.date_from);
-  if (filters.date_to)      params.set('date_to', filters.date_to);
+  if (filters.page)              params.set('page', String(filters.page));
+  if (filters.per_page)          params.set('per_page', String(filters.per_page));
+  if (filters.tx_type)           params.set('tx_type', filters.tx_type);
+  if (filters.ticker_yf)         params.set('ticker_yf', filters.ticker_yf);
+  if (filters.date_from)         params.set('date_from', filters.date_from);
+  if (filters.date_to)           params.set('date_to', filters.date_to);
+  if (filters.only_investments)  params.set('only_investments', 'true');
 
   return useQuery<TransactionsResponse>({
     queryKey: ['history', 'transactions', filters],

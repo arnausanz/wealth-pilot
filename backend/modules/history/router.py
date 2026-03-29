@@ -20,14 +20,16 @@ async def get_transactions(
     ticker_yf: Optional[str] = Query(default=None, description="Filtrar per ticker (e.g. IWDA.AS)"),
     date_from: Optional[str] = Query(default=None, description="Data inici (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(default=None, description="Data fi (YYYY-MM-DD)"),
+    only_investments: bool = Query(default=False, description="Si true, retorna només tx amb shares (totes les inversions)"),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Retorna transaccions paginades de MoneyWiz.
 
     Filtres opcionals:
-    - **tx_type**: filtra per tipus de transacció
-    - **ticker_yf**: filtra per asset (mostra automàticament solo investment_buy/sell)
+    - **tx_type**: filtra per tipus (investment_buy captura TOTES les compres, incl. expense/income amb shares)
+    - **only_investments**: mostra totes les transaccions d'inversió (qualsevol tx amb shares)
+    - **ticker_yf**: filtra per asset
     - **date_from / date_to**: rang de dates (YYYY-MM-DD)
     """
     return await service.get_transactions(
@@ -38,6 +40,7 @@ async def get_transactions(
         ticker_yf=ticker_yf,
         date_from=date_from,
         date_to=date_to,
+        only_investments=only_investments,
     )
 
 

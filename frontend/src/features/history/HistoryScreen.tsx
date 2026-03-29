@@ -25,12 +25,12 @@ const TX_COLORS: Record<string, string> = {
 };
 
 const FILTER_PILLS = [
-  { label: 'Inversions', value: undefined, txType: undefined, onlyInv: true },
-  { label: 'Compres',    value: 'investment_buy',  txType: 'investment_buy',  onlyInv: false },
-  { label: 'Vendes',     value: 'investment_sell', txType: 'investment_sell', onlyInv: false },
-  { label: 'Despeses',   value: 'expense',         txType: 'expense',         onlyInv: false },
-  { label: 'Ingressos',  value: 'income',          txType: 'income',          onlyInv: false },
-] as const;
+  { label: 'Inversions', txType: undefined as string | undefined, onlyInv: true  },
+  { label: 'Compres',    txType: 'investment_buy',                onlyInv: false },
+  { label: 'Vendes',     txType: 'investment_sell',               onlyInv: false },
+  { label: 'Despeses',   txType: 'expense',                       onlyInv: false },
+  { label: 'Ingressos',  txType: 'income',                        onlyInv: false },
+];
 
 // ─── Investment summary per asset ─────────────────────────────────────────────
 
@@ -128,11 +128,15 @@ function AssetSummaryRow({ asset, isLast }: { asset: AssetInvestmentSummary; isL
 // ─── Transaction row ──────────────────────────────────────────────────────────
 
 function TransactionRow({ tx, isLast }: { tx: TransactionOut; isLast: boolean }) {
-  const color     = tx.color_hex || ASSET_COLORS[tx.ticker_yf || ''] || TX_COLORS[tx.tx_type] || ASSET_COLOR_DEFAULT;
+  // Una transacció és inversió si té shares (independentment del tx_type que MoneyWiz assigni)
+  const isInvest  = tx.shares != null || tx.tx_type === 'investment_buy' || tx.tx_type === 'investment_sell';
+  const isSell    = tx.tx_type === 'investment_sell';
+  const effectiveType = isInvest ? (isSell ? 'investment_sell' : 'investment_buy') : tx.tx_type;
+
+  const color     = tx.color_hex || ASSET_COLORS[tx.ticker_yf || ''] || TX_COLORS[effectiveType] || ASSET_COLOR_DEFAULT;
   const amount    = n(tx.amount_eur);
-  const label     = TX_LABELS[tx.tx_type] || tx.tx_type;
-  const txColor   = TX_COLORS[tx.tx_type] || 'var(--color-text-secondary)';
-  const isInvest  = tx.tx_type === 'investment_buy' || tx.tx_type === 'investment_sell';
+  const label     = TX_LABELS[effectiveType] || tx.tx_type;
+  const txColor   = TX_COLORS[effectiveType] || 'var(--color-text-secondary)';
 
   // Format date: "28 mar 2026"
   const d = new Date(tx.tx_date + 'T00:00:00');
@@ -174,7 +178,10 @@ function TransactionRow({ tx, isLast }: { tx: TransactionOut; isLast: boolean })
           </span>
         ) : (
           <span style={{ fontSize: 12 }}>
-            {tx.tx_type === 'expense' ? '↓' : tx.tx_type === 'income' ? '↑' : '⇄'}
+            {effectiveType === 'expense' ? '↓'
+              : effectiveType === 'income' ? '↑'
+              : effectiveType === 'transfer_in' ? '↓+'
+              : '⇄'}
           </span>
         )}
       </div>
@@ -213,7 +220,7 @@ function TransactionRow({ tx, isLast }: { tx: TransactionOut; isLast: boolean })
             color: txColor,
           }}
         >
-          {tx.tx_type === 'income' ? '+' : ''}€{amount.toLocaleString('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {(effectiveType === 'income' || effectiveType === 'transfer_in') ? '+' : ''}€{amount.toLocaleString('ca-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
         {tx.shares != null && (
           <div
@@ -241,7 +248,8 @@ export function HistoryScreen() {
   const txFilters = {
     page,
     per_page: 25,
-    tx_type: activeFilter.txType,
+    tx_type:          activeFilter.txType,
+    only_investments: activeFilter.onlyInv,
   };
 
   const { data: investments, isLoading: loadingInv }  = useInvestmentSummary();

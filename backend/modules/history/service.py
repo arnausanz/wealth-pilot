@@ -39,12 +39,17 @@ async def get_transactions(
     ticker_yf: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
+    only_investments: bool = False,
 ) -> TransactionsResponse:
     """
     Retorna transaccions paginades amb filtres opcionals.
 
-    Per defecte mostra tots els tipus. Si es filtra per ticker_yf,
-    automàticament filtra per investment_buy/investment_sell.
+    Lògica de filtres:
+    - tx_type='investment_buy'  → totes les tx amb shares (no venda): expense/income/transfer/buy
+    - tx_type='investment_sell' → investment_sell exacte
+    - tx_type='expense'/'income' → exclou les que tenen shares (que són inversions disfressades)
+    - only_investments=True → totes les tx amb shares (Inversions)
+    - ticker_yf sense tx_type → totes les inversions d'aquell asset
     """
     per_page = max(1, min(100, per_page))
     page     = max(1, page)
@@ -54,16 +59,28 @@ async def get_transactions(
     where_clauses = []
     params: dict = {"limit": per_page, "offset": offset}
 
-    if tx_type and tx_type in _ALL_TX_TYPES:
-        where_clauses.append("mt.tx_type = :tx_type")
-        params["tx_type"] = tx_type
-    elif ticker_yf:
-        # Si filtrem per asset, limitem a transaccions d'inversió
-        where_clauses.append("mt.tx_type IN ('investment_buy', 'investment_sell')")
+    if tx_type:
+        if tx_type == 'investment_buy':
+            # Compra = qualsevol tx amb shares que no sigui venda
+            where_clauses.append("mt.shares IS NOT NULL AND mt.tx_type != 'investment_sell'")
+        elif tx_type == 'investment_sell':
+            where_clauses.append("mt.tx_type = 'investment_sell'")
+        elif tx_type in ('expense', 'income'):
+            # Despesa/ingrés real = sense shares (els amb shares son inversions)
+            where_clauses.append("mt.tx_type = :tx_type AND mt.shares IS NULL")
+            params["tx_type"] = tx_type
+        elif tx_type in _ALL_TX_TYPES:
+            where_clauses.append("mt.tx_type = :tx_type")
+            params["tx_type"] = tx_type
+    else:
+        if only_investments or ticker_yf:
+            # Inversions: qualsevol tx amb shares (inclou expense/income/transfer que son ETF buys)
+            where_clauses.append("mt.shares IS NOT NULL")
 
     if ticker_yf:
         where_clauses.append("a.ticker_yf = :ticker_yf")
         params["ticker_yf"] = ticker_yf
+        # Quan filtrem per asset, sempre joinegem assets (el LEFT JOIN ja és allà)
 
     if date_from:
         where_clauses.append("mt.tx_date >= :date_from")
@@ -135,35 +152,35 @@ async def get_investment_summary(db: AsyncSession) -> InvestmentSummaryResponse:
     Resum per asset: total invertit, posició actual, P&L.
     Combina transaccions de MoneyWiz amb preus actuals de Yahoo Finance.
     """
+    # Mateixa lògica que networth/service.py:
+    # - VENDA (-shares): investment_sell  (únic tipus de venda)
+    # - COMPRA (+shares): qualsevol altra tx amb shares (expense/income/transfer/investment_buy)
     rows = (await db.execute(text("""
         SELECT
             a.id             AS asset_id,
             a.display_name,
             a.ticker_yf,
             a.color_hex,
-            SUM(CASE mt.tx_type
-                WHEN 'investment_buy'  THEN  mt.shares
-                WHEN 'investment_sell' THEN -mt.shares
-                ELSE 0
+            SUM(CASE
+                WHEN mt.tx_type = 'investment_sell' THEN -mt.shares
+                ELSE mt.shares
             END)             AS total_shares,
-            SUM(CASE mt.tx_type
-                WHEN 'investment_buy'  THEN mt.amount_eur
-                ELSE 0
+            SUM(CASE
+                WHEN mt.tx_type = 'investment_sell' THEN 0
+                ELSE mt.amount_eur
             END)             AS total_invested,
-            COUNT(CASE mt.tx_type WHEN 'investment_buy'  THEN 1 END) AS buy_count,
-            COUNT(CASE mt.tx_type WHEN 'investment_sell' THEN 1 END) AS sell_count,
-            MIN(CASE mt.tx_type WHEN 'investment_buy' THEN mt.tx_date END) AS first_buy,
-            MAX(CASE mt.tx_type WHEN 'investment_buy' THEN mt.tx_date END) AS last_buy
+            COUNT(CASE WHEN mt.tx_type != 'investment_sell' THEN 1 END) AS buy_count,
+            COUNT(CASE WHEN mt.tx_type  = 'investment_sell' THEN 1 END) AS sell_count,
+            MIN(CASE WHEN mt.tx_type != 'investment_sell' THEN mt.tx_date END) AS first_buy,
+            MAX(CASE WHEN mt.tx_type != 'investment_sell' THEN mt.tx_date END) AS last_buy
         FROM mw_transactions mt
         JOIN assets a ON a.ticker_mw = mt.mw_symbol
-        WHERE mt.tx_type IN ('investment_buy', 'investment_sell')
-          AND mt.shares IS NOT NULL
+        WHERE mt.shares IS NOT NULL
           AND a.is_active = TRUE
         GROUP BY a.id, a.display_name, a.ticker_yf, a.color_hex
-        HAVING SUM(CASE mt.tx_type
-            WHEN 'investment_buy'  THEN  mt.shares
-            WHEN 'investment_sell' THEN -mt.shares
-            ELSE 0
+        HAVING SUM(CASE
+            WHEN mt.tx_type = 'investment_sell' THEN -mt.shares
+            ELSE mt.shares
         END) > 0
         ORDER BY total_invested DESC
     """))).fetchall()
