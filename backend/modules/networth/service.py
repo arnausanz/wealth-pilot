@@ -126,7 +126,9 @@ async def generate_snapshot(
             ORDER BY price_date DESC
             LIMIT 1
         ) ph ON TRUE
+        JOIN mw_accounts acc ON acc.id = mt.account_id
         WHERE mt.shares IS NOT NULL
+          AND acc.account_type = 'investment'
           AND mt.tx_date <= :snap_date
           AND a.is_active = TRUE
         GROUP BY a.id, a.display_name, a.ticker_yf, ph.price_close, ph.currency
