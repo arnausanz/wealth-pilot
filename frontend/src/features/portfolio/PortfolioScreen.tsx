@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNetWorthHistory } from '../../hooks/useNetWorth';
 import { useMarketPrices } from '../../hooks/useMarketPrices';
@@ -122,7 +122,6 @@ export function PortfolioScreen() {
   const { data: networthData, isLoading } = useNetWorthHistory('1y');
   const { data: pricesData } = useMarketPrices();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [syncState, setSyncState] = useState<SyncState>('idle');
   const [syncError, setSyncError] = useState('');
 
@@ -203,10 +202,11 @@ export function PortfolioScreen() {
           Cartera
         </div>
 
-        {/* Botó Actualitzar — obre el selector de fitxers de MoneyWiz */}
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={syncState === 'uploading'}
+        {/*
+          Botó Actualitzar — iOS Safari requereix <label> per obrir
+          el file picker; el .click() programàtic no funciona a iOS.
+        */}
+        <label
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -229,6 +229,7 @@ export function PortfolioScreen() {
             fontWeight: 500,
             cursor: syncState === 'uploading' ? 'default' : 'pointer',
             transition: 'all 0.2s ease',
+            pointerEvents: syncState === 'uploading' ? 'none' : 'auto',
           }}
         >
           <span style={{
@@ -241,16 +242,13 @@ export function PortfolioScreen() {
          : syncState === 'success'  ? 'Actualitzat'
          : syncState === 'error'    ? 'Error'
          : 'Actualitzar'}
-        </button>
-
-        {/* Input de fitxer ocult — s'obre amb el botó de dalt */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".zip,.moneywiz"
-          onChange={handleFileSelected}
-          style={{ display: 'none' }}
-        />
+          <input
+            type="file"
+            accept=".zip,.moneywiz"
+            onChange={handleFileSelected}
+            style={{ display: 'none' }}
+          />
+        </label>
       </div>
 
       {/* Missatge d'error sync */}
