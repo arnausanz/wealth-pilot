@@ -89,21 +89,28 @@ async def generate_snapshot(
     inv_value = Decimal("0")
 
     # ── 2. Posicions per asset (shares × preu YF actual) ────────────────────
+    # MoneyWiz pot registrar compres d'ETF de tres maneres:
+    #   - investment_buy / investment_sell : compra/venda nativa des del compte inversió
+    #   - expense / income                : compra/venda registrada des del compte corrent
+    #   - transfer_out / transfer_in      : transferència entre comptes (compra/venda)
+    # Qualsevol transacció amb shares != NULL és una operació d'inversió.
+    # Direcció: diners sortint (expense, transfer_out, investment_buy) = compra (+shares)
+    #           diners entrant (income,  transfer_in,  investment_sell) = venda  (-shares)
     positions_rows = (await db.execute(text("""
         SELECT
             a.id          AS asset_id,
             a.display_name,
             a.ticker_yf,
             SUM(
-                CASE mt.tx_type
-                    WHEN 'investment_buy'  THEN  mt.shares
-                    WHEN 'investment_sell' THEN -mt.shares
+                CASE
+                    WHEN mt.tx_type IN ('investment_buy',  'expense', 'transfer_out') THEN  mt.shares
+                    WHEN mt.tx_type IN ('investment_sell', 'income',  'transfer_in')  THEN -mt.shares
                     ELSE 0
                 END
             )                                             AS total_shares,
             SUM(
-                CASE mt.tx_type
-                    WHEN 'investment_buy'  THEN mt.amount_eur
+                CASE
+                    WHEN mt.tx_type IN ('investment_buy', 'expense', 'transfer_out') THEN mt.amount_eur
                     ELSE 0
                 END
             )                                             AS cost_basis,
@@ -119,15 +126,14 @@ async def generate_snapshot(
             ORDER BY price_date DESC
             LIMIT 1
         ) ph ON TRUE
-        WHERE mt.tx_type IN ('investment_buy', 'investment_sell')
-          AND mt.shares IS NOT NULL
+        WHERE mt.shares IS NOT NULL
           AND mt.tx_date <= :snap_date
           AND a.is_active = TRUE
         GROUP BY a.id, a.display_name, a.ticker_yf, ph.price_close, ph.currency
         HAVING SUM(
-            CASE mt.tx_type
-                WHEN 'investment_buy'  THEN  mt.shares
-                WHEN 'investment_sell' THEN -mt.shares
+            CASE
+                WHEN mt.tx_type IN ('investment_buy',  'expense', 'transfer_out') THEN  mt.shares
+                WHEN mt.tx_type IN ('investment_sell', 'income',  'transfer_in')  THEN -mt.shares
                 ELSE 0
             END
         ) > 0
