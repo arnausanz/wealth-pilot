@@ -48,9 +48,16 @@ export function DashboardScreen() {
   const prices = pricesData?.prices ?? [];
 
   const lastSnapshot = snapshots[snapshots.length - 1];
+  const firstSnapshot = snapshots[0];
   const total = n(lastSnapshot?.total_net_worth);
-  const changeEur = n(lastSnapshot?.change_eur);
-  const changePct = n(lastSnapshot?.change_pct);
+  // Variació calculada des del primer snapshot del període seleccionat fins al darrer
+  const firstTotal = n(firstSnapshot?.total_net_worth);
+  const changeEur = (lastSnapshot && firstSnapshot && firstSnapshot !== lastSnapshot)
+    ? n(lastSnapshot.total_net_worth) - firstTotal
+    : n(lastSnapshot?.change_eur);
+  const changePct = (firstTotal > 0 && firstSnapshot !== lastSnapshot)
+    ? ((n(lastSnapshot?.total_net_worth) - firstTotal) / firstTotal) * 100
+    : n(lastSnapshot?.change_pct);
 
   return (
     <div
