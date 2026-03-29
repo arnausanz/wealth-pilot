@@ -462,13 +462,17 @@ async def _prune_removed(
             logger.info("Prune: eliminades %d transaccions obsoletes", r.rowcount)
 
     if cat_ids:
-        # La FK self-referent (parent_id → id) impedeix eliminar pares si fills els referencien.
-        # Solució: posar parent_id = NULL per a les categories a eliminar, després eliminar-les.
+        # La FK self-referent (parent_id → id) impedeix eliminar categories si alguna altra
+        # (fins i tot de les que es queden) les referencia com a pare.
+        # Solució: nullejar TOTES les parent_id que apunten a categories que s'eliminaran.
         await db.execute(
             text("""
                 UPDATE mw_categories
                 SET parent_id = NULL
-                WHERE mw_internal_id != ALL(:keep)
+                WHERE parent_id IN (
+                    SELECT id FROM mw_categories
+                    WHERE mw_internal_id != ALL(:keep)
+                )
             """),
             {"keep": cat_ids},
         )
