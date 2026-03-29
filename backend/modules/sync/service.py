@@ -518,6 +518,7 @@ async def process_upload(
     )
     db.add(batch)
     await db.commit()
+    await db.refresh(batch)  # recarrega id i atributs expirats post-commit
 
     try:
         # Parsing del SQLite (síncron, fora del loop d'asyncio)
