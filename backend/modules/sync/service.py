@@ -519,6 +519,7 @@ async def process_upload(
     db.add(batch)
     await db.commit()
     await db.refresh(batch)  # recarrega id i atributs expirats post-commit
+    batch_id = batch.id     # int simple, immune a expiry/rollback
 
     try:
         # Parsing del SQLite (síncron, fora del loop d'asyncio)
@@ -567,7 +568,7 @@ async def process_upload(
         logger.info(
             "Sync completat [batch=%d]: %d comptes, %d categories, "
             "%d transaccions upserted, %d registres eliminats (prune)",
-            batch.id, acc_n, cat_n, tx_n, deleted,
+            batch_id, acc_n, cat_n, tx_n, deleted,
         )
 
         # Trigger automàtic: generar snapshot de net worth per avui
@@ -595,13 +596,15 @@ async def process_upload(
                     completed_at = :now
                 WHERE id = :id
             """),
-            {"log": str(exc)[:5000], "now": datetime.now(timezone.utc), "id": batch.id},
+            {"log": str(exc)[:5000], "now": datetime.now(timezone.utc), "id": batch_id},
         )
         await db.commit()
 
-        logger.error("MoneyWiz sync fallat [batch=%d]: %s", batch.id, exc, exc_info=True)
+        logger.error("MoneyWiz sync fallat [batch=%d]: %s", batch_id, exc, exc_info=True)
         raise
 
+    # Recarrega batch per retornar atributs frescos (segon commit els havia expirat)
+    await db.refresh(batch)
     return batch
 
 
