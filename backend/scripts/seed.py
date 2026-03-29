@@ -97,7 +97,7 @@ ASSETS = [
         "sort_order": 4,
     },
     {
-        "name": "iShares Core MSCI Japan IMI UCITS ETF",
+        "name": "Xtrackers MSCI Japan EUR Acc",
         "display_name": "Japan",
         "ticker_mw": "XMK9",
         "ticker_yf": Ticker.JAPAN,

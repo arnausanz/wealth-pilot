@@ -1,9 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNetWorthHistory } from '../../hooks/useNetWorth';
 import { useMarketPrices } from '../../hooks/useMarketPrices';
 import { Card } from '../../components/ui/Card';
 import { n, ASSET_COLORS } from '../../types';
 import type { AssetSnapshot, AssetPrice } from '../../types';
+
+type SyncState = 'idle' | 'uploading' | 'success' | 'error';
 
 function AssetRow({
   asset,
@@ -118,6 +121,40 @@ function AssetRow({
 export function PortfolioScreen() {
   const { data: networthData, isLoading } = useNetWorthHistory('1y');
   const { data: pricesData } = useMarketPrices();
+  const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [syncState, setSyncState] = useState<SyncState>('idle');
+  const [syncError, setSyncError] = useState('');
+
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Reset input per permetre tornar a seleccionar el mateix fitxer
+    e.target.value = '';
+
+    setSyncState('uploading');
+    setSyncError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/v1/sync/upload', {
+        method: 'POST',
+        credentials: 'same-origin',
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || `Error ${res.status}`);
+      }
+      await queryClient.invalidateQueries();
+      setSyncState('success');
+      setTimeout(() => setSyncState('idle'), 3000);
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'Error desconegut');
+      setSyncState('error');
+      setTimeout(() => setSyncState('idle'), 5000);
+    }
+  }
 
   const snapshots = networthData?.snapshots ?? [];
   const prices = pricesData?.prices ?? [];
@@ -154,7 +191,7 @@ export function PortfolioScreen() {
       }}
     >
       {/* Header */}
-      <div style={{ padding: '68px 24px 20px' }}>
+      <div style={{ padding: '68px 24px 20px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
         <div
           style={{
             fontSize: 24,
@@ -165,7 +202,70 @@ export function PortfolioScreen() {
         >
           Cartera
         </div>
+
+        {/* Botó Actualitzar — obre el selector de fitxers de MoneyWiz */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={syncState === 'uploading'}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '7px 14px',
+            borderRadius: 20,
+            border: `1px solid ${
+              syncState === 'success' ? 'var(--color-positive)' :
+              syncState === 'error'   ? 'var(--color-negative)' :
+              'var(--color-glass-border)'
+            }`,
+            background: 'var(--color-glass-bg)',
+            backdropFilter: 'var(--glass-blur)',
+            WebkitBackdropFilter: 'var(--glass-blur)',
+            color: syncState === 'success' ? 'var(--color-positive)'
+                 : syncState === 'error'   ? 'var(--color-negative)'
+                 : 'var(--color-text-secondary)',
+            fontSize: 12,
+            fontFamily: 'var(--font-num)',
+            fontWeight: 500,
+            cursor: syncState === 'uploading' ? 'default' : 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <span style={{
+            display: 'inline-block',
+            animation: syncState === 'uploading' ? 'spin 1s linear infinite' : 'none',
+          }}>
+            {syncState === 'success' ? '✓' : syncState === 'error' ? '✗' : '↻'}
+          </span>
+          {syncState === 'uploading' ? 'Pujant…'
+         : syncState === 'success'  ? 'Actualitzat'
+         : syncState === 'error'    ? 'Error'
+         : 'Actualitzar'}
+        </button>
+
+        {/* Input de fitxer ocult — s'obre amb el botó de dalt */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".zip,.moneywiz"
+          onChange={handleFileSelected}
+          style={{ display: 'none' }}
+        />
       </div>
+
+      {/* Missatge d'error sync */}
+      {syncState === 'error' && syncError && (
+        <div style={{ padding: '0 24px 8px' }}>
+          <div style={{
+            fontSize: 11,
+            fontFamily: 'var(--font-num)',
+            color: 'var(--color-negative)',
+            textAlign: 'center',
+          }}>
+            {syncError}
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <div style={{ padding: '0 24px' }}>

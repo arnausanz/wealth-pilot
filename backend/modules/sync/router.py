@@ -39,10 +39,11 @@ async def upload_backup(
     file: UploadFile = File(..., description="Fitxer .zip exportat des de MoneyWiz"),
     db: AsyncSession = Depends(get_db),
 ) -> ImportBatchOut:
-    if not file.filename or not file.filename.lower().endswith(".zip"):
+    _VALID_EXTENSIONS = (".zip", ".moneywiz")
+    if not file.filename or not file.filename.lower().endswith(_VALID_EXTENSIONS):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="El fitxer ha de ser un .zip exportat des de MoneyWiz",
+            detail="El fitxer ha de ser un .zip o .moneywiz exportat des de MoneyWiz",
         )
 
     zip_bytes = await file.read()
