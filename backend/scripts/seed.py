@@ -101,7 +101,7 @@ ASSETS = [
         "display_name": "Japan",
         "ticker_mw": "XMK9",
         "ticker_yf": Ticker.JAPAN,
-        "isin": "IE00B4L5YX21",
+        "isin": "IE00BJ38QD84",
         "asset_type": AssetType.ETF,
         "asset_class": AssetClass.EQUITY,
         "currency": "JPY",

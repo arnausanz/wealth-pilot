@@ -125,7 +125,7 @@ class Ticker:
     PHYSICAL_GOLD  = "PPFB.DE"
     MSCI_EUROPE    = "IMAE.AS"
     MSCI_EM_IMI    = "EMIM.AS"
-    JAPAN          = "XDJP.DE"   # Xtrackers MSCI Japan EUR Acc (Xetra)
+    JAPAN          = "XMK9.DE"   # Xtrackers MSCI Japan EUR Acc (Xetra, codi MW: XMK9)
     EUROPE_DEFENCE = "WDEF.MI"
     BITCOIN        = "BTC-EUR"
 
